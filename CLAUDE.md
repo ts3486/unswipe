@@ -81,3 +81,21 @@ UI screens are excluded from mandatory TDD (cover with E2E instead).
    - export/delete works
    - forbidden wording scan
    - analytics payload review
+
+## PR Review Process (MANDATORY)
+Every implementation must go through a self-review before requesting user approval:
+
+1. **Create a feature branch** — never commit directly to `main`
+2. **After implementation, run a review checklist:**
+   - All new/changed files are intentional (no stray edits)
+   - Tests pass (`npx jest` or relevant test runner)
+   - TypeScript compiles without errors (`npx tsc --noEmit`)
+   - No CLAUDE.md hard constraints violated (theme, locked libs, privacy rules, wording rules)
+   - No secrets, tokens, or sensitive data in the diff
+   - Commit messages are concise and descriptive
+3. **Create a PR** with:
+   - A clear title summarizing the change
+   - A body listing: what changed, why, and how to verify
+   - Reference to any related issues or tasks
+4. **Present the PR to the user for review** before merging — never merge without explicit user approval
+5. **Address feedback** — if the user requests changes, update the branch and re-request review

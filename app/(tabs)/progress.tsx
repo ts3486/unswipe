@@ -14,7 +14,6 @@ import { router } from 'expo-router';
 import { format, getDaysInMonth, getDay, startOfMonth } from 'date-fns';
 import { useAppState } from '@/src/contexts/AppStateContext';
 import { useDatabaseContext } from '@/src/contexts/DatabaseContext';
-import { ResistRankCompact } from '@/src/components/ResistRankCompact';
 import {
   countSuccessesByDate,
   getUrgeEventsInRange,
@@ -407,9 +406,6 @@ export default function ProgressScreen(): React.ReactElement {
       <Text variant="headlineMedium" style={styles.screenTitle}>
         Progress
       </Text>
-
-      {/* Resist Rank */}
-      <ResistRankCompact level={resistRank} resistCount={totalResistCount} />
 
       {/* Calendar */}
       <Card style={styles.card} mode="contained">
