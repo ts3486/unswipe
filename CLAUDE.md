@@ -72,10 +72,11 @@ Apply TDD to: domain rules, utilities, repository functions, and use-cases.
 UI screens are excluded from mandatory TDD (cover with E2E instead).
 
 ## Implementation Workflow
-1) Plan files + sequence
-2) Domain + tests → data layer (sqlite + seeds) → UI → services (lock/notifications/analytics/subscription)
-3) Keep logic out of screens; screens call hooks/use-cases
-4) Add ship checklist tests:
+1) Update SPEC.md — before planning, read `SPEC.md` and update it to reflect the feature/change being implemented (add new sections, revise existing ones, mark completed items). Get user approval on spec changes before proceeding.
+2) Plan files + sequence
+3) Domain + tests → data layer (sqlite + seeds) → UI → services (lock/notifications/analytics/subscription)
+4) Keep logic out of screens; screens call hooks/use-cases
+5) Add ship checklist tests:
    - airplane mode reset flow
    - local midnight boundary test
    - export/delete works
@@ -99,3 +100,29 @@ Every implementation must go through a self-review before requesting user approv
    - Reference to any related issues or tasks
 4. **Present the PR to the user for review** before merging — never merge without explicit user approval
 5. **Address feedback** — if the user requests changes, update the branch and re-request review
+
+## Build Guardrails (MANDATORY)
+Every implementation must pass `pnpm run preflight` before opening a PR or requesting review. This runs typecheck + lint + test in sequence. If any step fails, fix it before proceeding.
+
+### Pre-run checklist (before `pnpm run ios` / `pnpm run android`)
+Run these checks after every implementation to catch build-breaking issues early:
+
+1. **`pnpm run preflight`** — must pass (typecheck → lint → test)
+2. **`npx expo-doctor`** — verify Expo config and dependency compatibility
+3. **Metro bundle test** — run `npx expo export --platform ios` to confirm the JS bundle compiles without errors (catches missing imports, circular deps, runtime config issues that `tsc` misses)
+
+### If `pnpm run ios` stalls or fails
+Escalate through these steps in order — stop as soon as one fixes it:
+
+1. **Clear Metro cache**: `npx expo start --clear`
+2. **Reset Watchman**: `watchman watch-del-all`
+3. **Reinstall Pods**: `cd ios && pod install --repo-update`
+4. **Nuke iOS build artifacts**: `pnpm run clean:ios`
+5. **Full clean**: `pnpm run clean:all` (removes node_modules cache, .expo, watchman state, reinstalls everything)
+6. **Reprebuild**: `npx expo prebuild --clean` (regenerates the entire ios/ directory)
+
+### Convenience scripts (package.json)
+- `pnpm run preflight` — typecheck + lint + test (gate for PRs)
+- `pnpm run clean:metro` — clear Metro bundler cache
+- `pnpm run clean:ios` — remove ios/build, DerivedData, Pods and reinstall
+- `pnpm run clean:all` — nuclear option: wipe caches, watchman, reinstall deps + pods
