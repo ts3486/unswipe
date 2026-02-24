@@ -14,7 +14,7 @@
       "backgroundColor": "#0B1220"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.h25ksmwn99.unmatch",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -49,8 +49,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "328c88ce-d9a4-46d1-9441-7a5f6de73459"
+        "projectId": "7653ea39-9ced-477a-85c2-78b5d74cda96"
       }
-    }
+    },
+    "owner": "ts3486"
   }
 }
