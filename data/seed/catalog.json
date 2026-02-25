@@ -147,7 +147,7 @@
     }
   ],
   "copy": {
-    "panicCta": "Panic",
+    "panicCta": "Resist",
     "successTitle": "Nice work.",
     "successBody": "Small wins add up.",
     "failTitle": "It’s okay.",

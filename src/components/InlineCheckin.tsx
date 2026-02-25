@@ -1,10 +1,11 @@
 // InlineCheckin — inline daily check-in card for the home screen.
-// Three states: collapsed CTA, expanded (editable), and completed (read-only).
+// Two states: collapsed CTA, and completed (read-only).
+// Tapping the CTA triggers the full-screen CheckinOverlay via onExpand.
 // TypeScript strict mode.
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Divider, Surface, Text } from 'react-native-paper';
+import { Divider, Surface, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors } from '@/src/constants/theme';
@@ -17,38 +18,21 @@ import type { UseCheckinReturn } from '@/src/hooks/useCheckin';
 
 interface InlineCheckinProps {
   checkin: UseCheckinReturn;
+  onExpand?: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function InlineCheckin({ checkin }: InlineCheckinProps): React.ReactElement {
+export function InlineCheckin({ checkin, onExpand }: InlineCheckinProps): React.ReactElement {
   const {
-    mood,
-    fatigue,
-    urge,
     isComplete,
-    isSubmitting,
     existingCheckin,
-    setMood,
-    setFatigue,
-    setUrge,
-    submit,
   } = checkin;
-
-  const [expanded, setExpanded] = useState(false);
-
-  const handleSave = useCallback((): void => {
-    void submit();
-  }, [submit]);
 
   const handleDetails = useCallback((): void => {
     router.push('/checkin');
-  }, []);
-
-  const handleExpand = useCallback((): void => {
-    setExpanded(true);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -108,98 +92,31 @@ export function InlineCheckin({ checkin }: InlineCheckinProps): React.ReactEleme
   // Collapsed CTA state
   // ---------------------------------------------------------------------------
 
-  if (!expanded) {
-    return (
-      <TouchableOpacity onPress={handleExpand} activeOpacity={0.7}>
-        <Surface style={styles.card}>
-          <View style={styles.collapsedRow}>
-            <MaterialCommunityIcons
-              name="clipboard-text-outline"
-              size={22}
-              color={colors.primary}
-            />
-            <View style={styles.collapsedText}>
-              <Text variant="titleSmall" style={styles.title}>
-                Daily check-in
-              </Text>
-              <Text variant="bodySmall" style={styles.subtitle}>
-                A quick self-reflection — private and offline
-              </Text>
-            </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={18}
-              color={colors.muted}
-            />
-          </View>
-        </Surface>
-      </TouchableOpacity>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Expanded editable state
-  // ---------------------------------------------------------------------------
-
   return (
-    <Surface style={styles.card}>
-      <View style={styles.titleRow}>
-        <MaterialCommunityIcons
-          name="clipboard-text-outline"
-          size={20}
-          color={colors.primary}
-        />
-        <View>
-          <Text variant="titleSmall" style={styles.title}>
-            Daily check-in
-          </Text>
-          <Text variant="bodySmall" style={styles.subtitle}>
-            How are you today?
-          </Text>
+    <TouchableOpacity onPress={onExpand} activeOpacity={0.7}>
+      <Surface style={styles.card}>
+        <View style={styles.collapsedRow}>
+          <MaterialCommunityIcons
+            name="clipboard-text-outline"
+            size={22}
+            color={colors.primary}
+          />
+          <View style={styles.collapsedText}>
+            <Text variant="titleSmall" style={styles.title}>
+              Daily check-in
+            </Text>
+            <Text variant="bodySmall" style={styles.subtitle}>
+              A quick self-reflection — private and offline
+            </Text>
+          </View>
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={18}
+            color={colors.muted}
+          />
         </View>
-      </View>
-
-      <RatingChips
-        label="Mood"
-        value={mood}
-        onChange={setMood}
-        labelMap={MOOD_LABELS}
-      />
-      <Divider style={styles.divider} />
-      <RatingChips
-        label="Fatigue"
-        value={fatigue}
-        onChange={setFatigue}
-        labelMap={FATIGUE_LABELS}
-      />
-      <Divider style={styles.divider} />
-      <RatingChips
-        label="Urge level"
-        value={urge}
-        onChange={setUrge}
-        labelMap={URGE_LABELS}
-      />
-
-      <Button
-        mode="contained"
-        onPress={handleSave}
-        loading={isSubmitting}
-        disabled={isSubmitting}
-        style={styles.saveButton}
-        contentStyle={styles.saveButtonContent}
-        labelStyle={styles.saveButtonLabel}
-      >
-        Save reflection
-      </Button>
-
-      <Text
-        variant="labelMedium"
-        style={styles.detailsLink}
-        onPress={handleDetails}
-      >
-        Add details
-      </Text>
-    </Surface>
+      </Surface>
+    </TouchableOpacity>
   );
 }
 
@@ -248,18 +165,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     backgroundColor: colors.border,
-  },
-  saveButton: {
-    borderRadius: 14,
-    marginTop: 12,
-  },
-  saveButtonContent: {
-    paddingVertical: 6,
-  },
-  saveButtonLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   detailsLink: {
     color: colors.secondary,

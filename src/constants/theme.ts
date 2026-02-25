@@ -28,6 +28,8 @@ export const colors = {
   success: '#47C28B',
   /** Warning states */
   warning: '#F2C14E',
+  /** Danger / panic accent */
+  danger: '#FF4C6E',
 } as const;
 
 export type AppColors = typeof colors;

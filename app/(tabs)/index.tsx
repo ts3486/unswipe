@@ -2,7 +2,7 @@
 // Shows inline check-in hero, compact stat row, today's course card, and Reset CTA.
 // TypeScript strict mode.
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -14,6 +14,7 @@ import { useAppState } from '@/src/contexts/AppStateContext';
 import { useContent } from '@/src/hooks/useContent';
 import { useCheckin } from '@/src/hooks/useCheckin';
 import { InlineCheckin } from '@/src/components/InlineCheckin';
+import { CheckinOverlay } from '@/src/components/CheckinOverlay';
 import { ResistRankCompact } from '@/src/components/ResistRankCompact';
 import { colors } from '@/src/constants/theme';
 import { Logo } from '@/src/components/Logo';
@@ -38,6 +39,7 @@ export default function HomeScreen(): React.ReactElement {
     useContent(userProfile?.created_at ?? null);
 
   const checkin = useCheckin();
+  const [checkinOverlayVisible, setCheckinOverlayVisible] = useState(false);
 
   const catalog = getCatalog();
   const resetCtaLabel = catalog.copy['panicCta'] ?? 'Reset now';
@@ -47,6 +49,14 @@ export default function HomeScreen(): React.ReactElement {
 
   const handleResetPress = useCallback((): void => {
     router.push('/(tabs)/panic');
+  }, []);
+
+  const handleCheckinExpand = useCallback((): void => {
+    setCheckinOverlayVisible(true);
+  }, []);
+
+  const handleCheckinClose = useCallback((): void => {
+    setCheckinOverlayVisible(false);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -89,7 +99,7 @@ export default function HomeScreen(): React.ReactElement {
         </View>
 
         {/* Inline check-in hero */}
-        <InlineCheckin checkin={checkin} />
+        <InlineCheckin checkin={checkin} onExpand={handleCheckinExpand} />
 
         {/* Today's course card */}
         {!contentLoading && todayContent !== null && (
@@ -133,6 +143,11 @@ export default function HomeScreen(): React.ReactElement {
           {resetCtaLabel}
         </Button>
       </View>
+
+      {/* Full-screen daily check-in overlay */}
+      {checkinOverlayVisible && (
+        <CheckinOverlay checkin={checkin} onClose={handleCheckinClose} />
+      )}
     </View>
   );
 }
@@ -269,6 +284,7 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     borderRadius: 14,
+    backgroundColor: colors.danger,
   },
   resetButtonContent: {
     paddingVertical: 8,
