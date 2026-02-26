@@ -3,7 +3,7 @@
 // TypeScript strict mode.
 
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Divider, Text } from 'react-native-paper';
 import { colors } from '@/src/constants/theme';
 
@@ -55,35 +55,43 @@ export default function BlockerGuideScreen(): React.ReactElement {
 
       <Divider style={styles.divider} />
 
-      {/* iOS Section */}
-      <Text variant="titleLarge" style={styles.platformTitle}>
-        iOS — Screen Time
-      </Text>
+      {Platform.OS === 'ios' && (
+        <>
+          {/* iOS Section */}
+          <Text variant="titleLarge" style={styles.platformTitle}>
+            Screen Time
+          </Text>
 
-      <Card style={styles.card} mode="contained">
-        <Card.Content style={styles.stepsContent}>
-          {IOS_STEPS.map((step, idx) => (
-            <StepRow key={idx} number={idx + 1} text={step} isLast={idx === IOS_STEPS.length - 1} />
-          ))}
-        </Card.Content>
-      </Card>
+          <Card style={styles.card} mode="contained">
+            <Card.Content style={styles.stepsContent}>
+              {IOS_STEPS.map((step, idx) => (
+                <StepRow key={idx} number={idx + 1} text={step} isLast={idx === IOS_STEPS.length - 1} />
+              ))}
+            </Card.Content>
+          </Card>
 
-      <Divider style={styles.divider} />
+          <Divider style={styles.divider} />
+        </>
+      )}
 
-      {/* Android Section */}
-      <Text variant="titleLarge" style={styles.platformTitle}>
-        Android — Digital Wellbeing
-      </Text>
+      {Platform.OS === 'android' && (
+        <>
+          {/* Android Section */}
+          <Text variant="titleLarge" style={styles.platformTitle}>
+            Digital Wellbeing
+          </Text>
 
-      <Card style={styles.card} mode="contained">
-        <Card.Content style={styles.stepsContent}>
-          {ANDROID_STEPS.map((step, idx) => (
-            <StepRow key={idx} number={idx + 1} text={step} isLast={idx === ANDROID_STEPS.length - 1} />
-          ))}
-        </Card.Content>
-      </Card>
+          <Card style={styles.card} mode="contained">
+            <Card.Content style={styles.stepsContent}>
+              {ANDROID_STEPS.map((step, idx) => (
+                <StepRow key={idx} number={idx + 1} text={step} isLast={idx === ANDROID_STEPS.length - 1} />
+              ))}
+            </Card.Content>
+          </Card>
 
-      <Divider style={styles.divider} />
+          <Divider style={styles.divider} />
+        </>
+      )}
 
       <View style={styles.tipBox}>
         <Text variant="labelMedium" style={styles.tipLabel}>

@@ -4,6 +4,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   View,
@@ -206,7 +207,7 @@ export default function PaywallScreen(): React.ReactElement {
 
       <Divider style={styles.footerDivider} />
       <Text variant="bodySmall" style={styles.footerText}>
-        Subscriptions are managed by the App Store or Google Play. No data is shared with payment processors.
+        Subscriptions are managed by the {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}. No data is shared with payment processors.
       </Text>
 
       <View style={styles.bottomSpacer} />
