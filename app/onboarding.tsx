@@ -53,7 +53,7 @@ type Step =
 	| "demo";
 
 // Sub-steps within the demo step
-type DemoSubStep = "intro" | "breathing" | "action" | "nicework";
+type DemoSubStep = "intro" | "breathing" | "action" | "checkin" | "nicework";
 
 interface GoalOption {
 	id: GoalType;
@@ -317,11 +317,8 @@ export default function OnboardingScreen(): React.ReactElement {
 				}
 			}
 
-			// After demo, go to paywall with onboarding context
-			router.replace({
-				pathname: "/paywall",
-				params: { trigger_source: "onboarding" },
-			});
+			// After demo, go to hard paywall
+			router.replace("/paywall");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -843,7 +840,7 @@ export default function OnboardingScreen(): React.ReactElement {
 						<Button
 							mode="contained"
 							onPress={() => {
-								setDemoSubStep("nicework");
+								setDemoSubStep("checkin");
 							}}
 							style={styles.primaryButton}
 							contentStyle={styles.primaryButtonContent}
@@ -851,6 +848,77 @@ export default function OnboardingScreen(): React.ReactElement {
 							testID="demo-action-done"
 						>
 							I did it
+						</Button>
+					</View>
+				</View>
+			);
+		}
+
+		// --- Sub-step: checkin ---
+		if (demoSubStep === "checkin") {
+			return (
+				<View style={styles.root}>
+					<ProgressDots steps={orderedSteps} current="demo" />
+					<ScrollView
+						style={styles.scroll}
+						contentContainerStyle={styles.scrollContent}
+						showsVerticalScrollIndicator={false}
+					>
+						<Text variant="headlineMedium" style={styles.stepTitle}>
+							Daily check-in
+						</Text>
+						<Text variant="bodyMedium" style={styles.stepSubtitle}>
+							Each day, a quick private reflection on how you're feeling.
+						</Text>
+
+						{/* Preview of mood/fatigue/urge rating chips (display-only) */}
+						<Surface style={styles.demoActionCard} elevation={2}>
+							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
+								Mood
+							</Text>
+							<View style={styles.chipGrid}>
+								{[1, 2, 3, 4, 5].map((n) => (
+									<Chip key={`mood-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
+										{n}
+									</Chip>
+								))}
+							</View>
+
+							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
+								Fatigue
+							</Text>
+							<View style={styles.chipGrid}>
+								{[1, 2, 3, 4, 5].map((n) => (
+									<Chip key={`fatigue-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
+										{n}
+									</Chip>
+								))}
+							</View>
+
+							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
+								Urge level
+							</Text>
+							<View style={styles.chipGrid}>
+								{[1, 2, 3, 4, 5].map((n) => (
+									<Chip key={`urge-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
+										{n}
+									</Chip>
+								))}
+							</View>
+						</Surface>
+					</ScrollView>
+					<View style={styles.bottomActions}>
+						<Button
+							mode="contained"
+							onPress={() => {
+								setDemoSubStep("nicework");
+							}}
+							style={styles.primaryButton}
+							contentStyle={styles.primaryButtonContent}
+							labelStyle={styles.primaryButtonLabel}
+							testID="demo-checkin-continue"
+						>
+							Continue
 						</Button>
 					</View>
 				</View>
@@ -919,7 +987,7 @@ function DemoNiceWork({
 					Nice work.
 				</Text>
 				<Text variant="bodyLarge" style={styles.niceworkBody}>
-					You just did a real reset. That's what this whole app is built around.
+					You just completed a reset and saw your daily check-in. That's the core of Unmatch.
 				</Text>
 				{isSubmitting && (
 					<Text variant="bodySmall" style={styles.niceworkLoading}>
@@ -1187,6 +1255,22 @@ const styles = StyleSheet.create({
 		fontStyle: "italic",
 		textAlign: "center",
 		lineHeight: 24,
+	},
+	// Checkin preview
+	checkinPreviewLabel: {
+		color: colors.muted,
+		textTransform: "uppercase",
+		letterSpacing: 0.8,
+		marginTop: 8,
+		marginBottom: 4,
+	},
+	previewChip: {
+		backgroundColor: colors.surface,
+		borderColor: colors.border,
+		borderWidth: 1,
+	},
+	previewChipText: {
+		color: colors.muted,
 	},
 	// Nice work screen
 	niceworkIconContainer: {

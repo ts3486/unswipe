@@ -37,8 +37,6 @@ export default function PanicScreen(): React.ReactElement {
 	const flow = usePanicFlow();
 	const {
 		refreshProgress,
-		isPremium,
-		panicFreeUsesRemaining,
 		streak,
 		resistCount,
 		resistRank,
@@ -67,11 +65,6 @@ export default function PanicScreen(): React.ReactElement {
 	// ---------------------------------------------------------------------------
 
 	if (flow.step === "select_urge") {
-		// Gate 2nd+ use for free users. First use is always allowed.
-		if (!isPremium && panicFreeUsesRemaining <= 0) {
-			return <PanicPaywallGate />;
-		}
-
 		return (
 			<SelectUrgeStep
 				onSelect={(kind: UrgeKind) => {
@@ -229,45 +222,6 @@ export default function PanicScreen(): React.ReactElement {
 // ---------------------------------------------------------------------------
 // Step sub-components
 // ---------------------------------------------------------------------------
-
-// --- PanicPaywallGate -------------------------------------------------------
-
-function PanicPaywallGate(): React.ReactElement {
-	return (
-		<View style={styles.paywallGateContainer}>
-			<View style={styles.paywallGateIconWrap}>
-				<MaterialCommunityIcons
-					name="heart-pulse"
-					size={48}
-					color={colors.primary}
-				/>
-			</View>
-			<Text variant="headlineMedium" style={styles.paywallGateTitle}>
-				That felt good.
-			</Text>
-			<Text variant="bodyLarge" style={styles.paywallGateBody}>
-				Unlock unlimited resets to keep the momentum going.
-			</Text>
-			<Button
-				mode="contained"
-				onPress={() => {
-					router.push({
-						pathname: "/paywall",
-						params: { trigger_source: "panic_limit" },
-					});
-				}}
-				style={styles.paywallGateCta}
-				contentStyle={styles.paywallGateCtaContent}
-				labelStyle={styles.paywallGateCtaLabel}
-			>
-				Unlock Unmatch — $6.99
-			</Button>
-			<Text variant="bodySmall" style={styles.paywallGateNote}>
-				One-time purchase. No subscription.
-			</Text>
-		</View>
-	);
-}
 
 // --- SelectUrgeStep ---------------------------------------------------------
 
@@ -996,51 +950,6 @@ const styles = StyleSheet.create({
 	fallback: {
 		flex: 1,
 		backgroundColor: colors.background,
-	},
-	// Paywall gate
-	paywallGateContainer: {
-		flex: 1,
-		backgroundColor: colors.background,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: 32,
-		gap: 16,
-	},
-	paywallGateIconWrap: {
-		width: 96,
-		height: 96,
-		borderRadius: 48,
-		backgroundColor: "#0F1D3A",
-		alignItems: "center",
-		justifyContent: "center",
-		marginBottom: 8,
-	},
-	paywallGateTitle: {
-		color: colors.text,
-		fontWeight: "700",
-		textAlign: "center",
-	},
-	paywallGateBody: {
-		color: colors.muted,
-		textAlign: "center",
-		lineHeight: 26,
-	},
-	paywallGateCta: {
-		borderRadius: 14,
-		backgroundColor: colors.primary,
-		width: "100%",
-		marginTop: 8,
-	},
-	paywallGateCtaContent: {
-		paddingVertical: 8,
-	},
-	paywallGateCtaLabel: {
-		fontSize: 16,
-		fontWeight: "700",
-	},
-	paywallGateNote: {
-		color: colors.muted,
-		textAlign: "center",
 	},
 	stepContainer: {
 		flex: 1,

@@ -98,6 +98,11 @@ const MIGRATE_SUBSCRIPTION_IS_PREMIUM = `
 ALTER TABLE subscription_state ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0;
 `.trim();
 
+// Migration: upgrade existing one_time purchasers to lifetime.
+const MIGRATE_ONE_TIME_TO_LIFETIME = `
+UPDATE subscription_state SET status = 'lifetime', period = 'lifetime' WHERE status = 'one_time';
+`.trim();
+
 /**
  * Opens the database, enables WAL mode, and creates all tables.
  * Must be called once at app startup before any repository is used.
@@ -128,6 +133,9 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   } catch {
     // Column already exists — safe to ignore.
   }
+
+  // Upgrade existing one_time purchasers to lifetime (idempotent).
+  await db.execAsync(MIGRATE_ONE_TIME_TO_LIFETIME);
 
   _db = db;
   return db;

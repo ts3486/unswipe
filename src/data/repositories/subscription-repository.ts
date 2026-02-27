@@ -32,10 +32,10 @@ function rowToSubscriptionState(row: SubscriptionStateRow): SubscriptionState {
     id: row.id,
     status,
     product_id: row.product_id ?? '',
-    period: (row.period ?? 'one_time') as SubscriptionState['period'],
+    period: (row.period ?? 'lifetime') as SubscriptionState['period'],
     started_at: row.started_at ?? '',
     expires_at: row.expires_at ?? '',
-    is_premium: row.is_premium === 1 || status === 'active' || status === 'one_time',
+    is_premium: row.is_premium === 1 || status === 'active' || status === 'lifetime',
   };
 }
 
@@ -82,17 +82,17 @@ export async function upsertSubscription(
 }
 
 /**
- * Records a one-time purchase, setting is_premium = true and status = 'one_time'.
+ * Records a lifetime purchase, setting is_premium = true and status = 'lifetime'.
  */
-export async function recordOneTimePurchase(
+export async function recordLifetimePurchase(
   db: SQLiteDatabase,
   productId: string,
 ): Promise<void> {
   const now = new Date().toISOString();
   await upsertSubscription(db, {
-    status: 'one_time',
+    status: 'lifetime',
     product_id: productId,
-    period: 'one_time',
+    period: 'lifetime',
     started_at: now,
     expires_at: '',
     is_premium: true,
@@ -100,7 +100,28 @@ export async function recordOneTimePurchase(
 }
 
 /**
- * Returns true if the user has premium access (one-time purchase or active subscription).
+ * Records a monthly subscription, setting is_premium = true and status = 'active'.
+ * Sets expires_at to 1 month from now.
+ */
+export async function recordMonthlySubscription(
+  db: SQLiteDatabase,
+  productId: string,
+): Promise<void> {
+  const now = new Date();
+  const expiresAt = new Date(now);
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+  await upsertSubscription(db, {
+    status: 'active',
+    product_id: productId,
+    period: 'monthly',
+    started_at: now.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    is_premium: true,
+  });
+}
+
+/**
+ * Returns true if the user has premium access (lifetime purchase or active subscription).
  */
 export async function getIsPremium(db: SQLiteDatabase): Promise<boolean> {
   const state = await getSubscription(db);

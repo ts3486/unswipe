@@ -16,56 +16,14 @@ import { router } from "expo-router";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
-import { Divider, List, Surface, Text } from "react-native-paper";
-
-// ---------------------------------------------------------------------------
-// WhyWeCharge — inline expandable card
-// ---------------------------------------------------------------------------
-
-function WhyWeCharge(): React.ReactElement {
-	const [expanded, setExpanded] = useState(false);
-
-	return (
-		<Surface style={styles.whyCard} elevation={1}>
-			<List.Item
-				title="Why Unmatch costs $6.99"
-				description={
-					expanded
-						? "No ads. No data selling. No subscription traps. Your one-time purchase funds development and keeps your data private. We'll never show ads or sell your information."
-						: "Tap to learn why we charge a one-time fee."
-				}
-				titleStyle={styles.listTitle}
-				descriptionStyle={[
-					styles.listDesc,
-					expanded && styles.listDescExpanded,
-				]}
-				descriptionNumberOfLines={expanded ? 0 : 1}
-				onPress={() => {
-					setExpanded((prev) => !prev);
-				}}
-				accessibilityLabel={`Why Unmatch costs $6.99 — ${expanded ? "collapse" : "expand"}`}
-				accessibilityRole="button"
-				accessibilityState={{ expanded }}
-				left={() => (
-					<List.Icon icon="information-outline" color={colors.secondary} />
-				)}
-				right={() => (
-					<List.Icon
-						icon={expanded ? "chevron-up" : "chevron-down"}
-						color={colors.muted}
-					/>
-				)}
-			/>
-		</Surface>
-	);
-}
+import { Divider, List, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function SettingsScreen(): React.ReactElement {
-	const { userProfile, refreshProfile, isPremium } = useAppState();
+	const { userProfile, refreshProfile, refreshPremiumStatus } = useAppState();
 	const { db } = useDatabaseContext();
 
 	const [notifStyle, setNotifStyle] = useState<NotificationStyle>(
@@ -196,40 +154,97 @@ export default function SettingsScreen(): React.ReactElement {
 				Plan
 			</Text>
 			<View style={styles.listCard}>
-				{!isPremium ? (
-					<List.Item
-						title="Unlock Unmatch"
-						description="One-time purchase — $6.99. No subscription."
-						titleStyle={[styles.listTitle, styles.unlockTitle]}
-						descriptionStyle={styles.listDesc}
-						onPress={() => {
-							router.push("/paywall");
-						}}
-						accessibilityLabel="Unlock Unmatch — one-time purchase for $6.99"
-						accessibilityRole="button"
-						left={() => (
-							<List.Icon icon="lock-open-outline" color={colors.primary} />
-						)}
-						right={({ color }) => (
-							<List.Icon icon="chevron-right" color={color} />
-						)}
-					/>
-				) : (
-					<List.Item
-						title="Unmatch Unlocked"
-						description="You have full access. Thank you!"
-						titleStyle={styles.listTitle}
-						descriptionStyle={styles.listDesc}
-						accessibilityLabel="Unmatch is unlocked — you have full access"
-						left={() => (
-							<List.Icon icon="check-circle-outline" color={colors.success} />
-						)}
-					/>
-				)}
+				<List.Item
+					title="Unmatch Unlocked"
+					description="You have full access. Thank you!"
+					titleStyle={styles.listTitle}
+					descriptionStyle={styles.listDesc}
+					accessibilityLabel="Unmatch is unlocked — you have full access"
+					left={() => (
+						<List.Icon icon="check-circle-outline" color={colors.success} />
+					)}
+				/>
 			</View>
 
-			{/* Why We Charge */}
-			<WhyWeCharge />
+			{/* Dev-only tools — __DEV__ is false in production builds, so the
+			    bundler strips this entire block from release bundles. */}
+			{__DEV__ && (
+				<>
+					<Text variant="labelLarge" style={styles.sectionLabel}>
+						Dev Tools
+					</Text>
+					<View style={styles.listCard}>
+						<List.Item
+							title="Reset subscription"
+							description="Clears premium status so you can test the paywall"
+							titleStyle={[styles.listTitle, { color: colors.warning }]}
+							descriptionStyle={styles.listDesc}
+							onPress={() => {
+								Alert.alert(
+									"Reset subscription?",
+									"This will remove your premium status and redirect to the paywall.",
+									[
+										{ text: "Cancel", style: "cancel" },
+										{
+											text: "Reset",
+											style: "destructive",
+											onPress: () => {
+												void (async () => {
+													await db.runAsync(
+														"DELETE FROM subscription_state WHERE id = 'singleton';",
+													);
+													await refreshPremiumStatus();
+													router.replace("/paywall");
+												})();
+											},
+										},
+									],
+								);
+							}}
+							accessibilityLabel="Reset subscription for testing"
+							left={() => (
+								<List.Icon icon="bug-outline" color={colors.warning} />
+							)}
+						/>
+						<Divider style={{ backgroundColor: colors.border }} />
+						<List.Item
+							title="Reset onboarding"
+							description="Wipes profile so you restart from onboarding"
+							titleStyle={[styles.listTitle, { color: colors.warning }]}
+							descriptionStyle={styles.listDesc}
+							onPress={() => {
+								Alert.alert(
+									"Reset onboarding?",
+									"This will delete your profile and all data. The app will restart at onboarding.",
+									[
+										{ text: "Cancel", style: "cancel" },
+										{
+											text: "Reset",
+											style: "destructive",
+											onPress: () => {
+												void (async () => {
+													await db.runAsync("DELETE FROM user_profile;");
+													await db.runAsync("DELETE FROM subscription_state;");
+													await db.runAsync("DELETE FROM daily_checkin;");
+													await db.runAsync("DELETE FROM urge_event;");
+													await db.runAsync("DELETE FROM progress;");
+													await db.runAsync("DELETE FROM content_progress;");
+													await refreshProfile();
+													router.replace("/onboarding");
+												})();
+											},
+										},
+									],
+								);
+							}}
+							accessibilityLabel="Reset onboarding for testing"
+							left={() => (
+								<List.Icon icon="restart" color={colors.warning} />
+							)}
+						/>
+					</View>
+				</>
+			)}
 
 			<Divider style={styles.footerDivider} />
 			<View style={styles.brandingRow}>
@@ -282,10 +297,6 @@ const styles = StyleSheet.create({
 		color: colors.text,
 		fontWeight: "500",
 	},
-	unlockTitle: {
-		color: colors.primary,
-		fontWeight: "700",
-	},
 	listDesc: {
 		color: colors.muted,
 		fontSize: 12,
@@ -295,18 +306,6 @@ const styles = StyleSheet.create({
 		color: colors.primary,
 		alignSelf: "center",
 		marginRight: 4,
-	},
-	listDescExpanded: {
-		lineHeight: 20,
-		marginTop: 4,
-	},
-	whyCard: {
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-		overflow: "hidden",
-		marginTop: 4,
 	},
 	footerDivider: {
 		backgroundColor: colors.border,

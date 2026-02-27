@@ -20,13 +20,10 @@ import {
   createUserProfile,
   getAllProgressDates,
   countSuccessesByDate,
-  countCompletedPanicSessions,
   getLatestProgress,
   getUserProfile,
 } from '@/src/data/repositories';
-import { getIsPremium, recordOneTimePurchase } from '@/src/data/repositories/subscription-repository';
-
-const FREE_PANIC_USES = 1;
+import { getIsPremium, recordLifetimePurchase, recordMonthlySubscription } from '@/src/data/repositories/subscription-repository';
 import { getLocalDateString } from '@/src/utils/date';
 import { useDatabaseContext } from './DatabaseContext';
 
@@ -44,8 +41,6 @@ interface AppState {
   isOnboarded: boolean;
   isLoading: boolean;
   isPremium: boolean;
-  /** Number of free panic resets still available (0 once all free uses exhausted). */
-  panicFreeUsesRemaining: number;
 }
 
 interface AppStateActions {
@@ -55,7 +50,7 @@ interface AppStateActions {
   completeOnboarding: (
     profile: Omit<UserProfile, 'id' | 'created_at'>,
   ) => Promise<void>;
-  unlockPremium: (productId: string) => Promise<void>;
+  unlockPremium: (productId: string, period: 'monthly' | 'lifetime') => Promise<void>;
 }
 
 type AppStateContextValue = AppState & AppStateActions;
@@ -85,7 +80,6 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   const [todaySuccess, setTodaySuccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPremium, setIsPremium] = useState<boolean>(false);
-  const [panicFreeUsesRemaining, setPanicFreeUsesRemaining] = useState<number>(FREE_PANIC_USES);
 
   // ---------------------------------------------------------------------------
   // Data loaders
@@ -99,17 +93,6 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   const refreshPremium = useCallback(async (): Promise<void> => {
     const premium = await getIsPremium(db);
     setIsPremium(premium);
-
-    // Compute free uses remaining based on completed panic sessions.
-    // Once premium, always unlimited.
-    if (!premium) {
-      const completedSessions = await countCompletedPanicSessions(db);
-      const remaining = Math.max(0, FREE_PANIC_USES - completedSessions);
-      setPanicFreeUsesRemaining(remaining);
-    } else {
-      // Premium users have unlimited uses; represent as a large number.
-      setPanicFreeUsesRemaining(FREE_PANIC_USES);
-    }
   }, [db]);
 
   const refreshProgress = useCallback(async (): Promise<void> => {
@@ -154,8 +137,12 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   );
 
   const unlockPremium = useCallback(
-    async (productId: string): Promise<void> => {
-      await recordOneTimePurchase(db, productId);
+    async (productId: string, period: 'monthly' | 'lifetime'): Promise<void> => {
+      if (period === 'lifetime') {
+        await recordLifetimePurchase(db, productId);
+      } else {
+        await recordMonthlySubscription(db, productId);
+      }
       await refreshPremium();
     },
     [db, refreshPremium],
@@ -196,7 +183,6 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     isOnboarded: userProfile !== null,
     isLoading,
     isPremium,
-    panicFreeUsesRemaining,
     refreshProgress,
     refreshProfile,
     refreshPremiumStatus: refreshPremium,

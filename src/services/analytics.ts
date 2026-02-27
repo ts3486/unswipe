@@ -94,6 +94,7 @@ export type AnalyticsEvent =
 			name: "purchase_completed";
 			props: {
 				product_id: string;
+				period: string;
 			};
 	  }
 	| {

@@ -17,7 +17,6 @@ export {
   getUrgeCountByDayOfWeek,
   getUrgeCountByTimeOfDay,
   getSuccessCountInRange,
-  countCompletedPanicSessions,
 } from './urge-repository';
 export type { DayOfWeekCount, TimeOfDayCount } from './urge-repository';
 
@@ -45,4 +44,6 @@ export {
 export {
   getSubscription,
   upsertSubscription,
+  recordLifetimePurchase,
+  recordMonthlySubscription,
 } from './subscription-repository';

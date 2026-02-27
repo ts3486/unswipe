@@ -93,7 +93,7 @@ function InnerLayout(): React.ReactElement {
 				switch (identifier) {
 					case "daily-checkin":
 					case "streak-nudge":
-						router.push("/(tabs)/home");
+						router.push("/(tabs)");
 						break;
 					case "course-unlock":
 						router.push("/(tabs)/learn");
@@ -121,7 +121,7 @@ function InnerLayout(): React.ReactElement {
 				<Stack.Screen name="onboarding" options={{ headerShown: false }} />
 				<Stack.Screen
 					name="paywall"
-					options={{ presentation: "modal", headerShown: false }}
+					options={{ headerShown: false, gestureEnabled: false }}
 				/>
 				<Stack.Screen
 					name="settings/blocker-guide"

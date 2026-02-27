@@ -51,7 +51,7 @@ function usePulseAnimation(): Animated.Value {
 }
 
 export default function TabsLayout(): React.ReactElement {
-  const { isOnboarded, isLoading } = useAppState();
+  const { isOnboarded, isLoading, isPremium } = useAppState();
   const pauseOpacity = usePulseAnimation();
 
   // While the database and profile are loading, render nothing to avoid flash.
@@ -61,6 +61,10 @@ export default function TabsLayout(): React.ReactElement {
 
   if (!isOnboarded) {
     return <Redirect href="/onboarding" />;
+  }
+
+  if (!isPremium) {
+    return <Redirect href="/paywall" />;
   }
 
   return (

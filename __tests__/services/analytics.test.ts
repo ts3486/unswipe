@@ -121,7 +121,15 @@ describe('NoopAnalyticsAdapter', () => {
   it('track() does not throw for paywall_viewed', () => {
     const event: AnalyticsEvent = {
       name: 'paywall_viewed',
-      props: { trigger_source: 'settings' },
+      props: { trigger_source: 'hard_gate' },
+    };
+    expect(() => adapter.track(event)).not.toThrow();
+  });
+
+  it('track() does not throw for purchase_completed', () => {
+    const event: AnalyticsEvent = {
+      name: 'purchase_completed',
+      props: { product_id: 'unmatch_lifetime_2999', period: 'lifetime' },
     };
     expect(() => adapter.track(event)).not.toThrow();
   });
@@ -129,7 +137,7 @@ describe('NoopAnalyticsAdapter', () => {
   it('track() does not throw for subscription_started', () => {
     const event: AnalyticsEvent = {
       name: 'subscription_started',
-      props: { product_id: 'premium_monthly', period: 'monthly' },
+      props: { product_id: 'unmatch_monthly_499', period: 'monthly' },
     };
     expect(() => adapter.track(event)).not.toThrow();
   });

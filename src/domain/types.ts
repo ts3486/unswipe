@@ -30,16 +30,9 @@ export type UrgeOutcome = 'success' | 'fail' | 'ongoing';
 
 export type SpendingLimitMode = 'soft' | 'pledge';
 
-export type SubscriptionStatus = 'active' | 'expired' | 'none' | 'one_time';
+export type SubscriptionStatus = 'active' | 'expired' | 'none' | 'lifetime';
 
-export type SubscriptionPeriod = 'monthly' | 'yearly' | 'one_time';
-
-export type PaywallTriggerSource =
-  | 'settings'
-  | 'panic_limit'
-  | 'learn_locked'
-  | 'progress_locked'
-  | 'onboarding';
+export type SubscriptionPeriod = 'monthly' | 'lifetime';
 
 // ---------------------------------------------------------------------------
 // DB-backed entity interfaces
@@ -138,7 +131,7 @@ export interface ContentProgress {
 
 /**
  * Mirrors subscription_state table.
- * is_premium is true for one-time purchases (status === 'one_time') or active subscriptions.
+ * is_premium is true for lifetime purchases (status === 'lifetime') or active subscriptions.
  */
 export interface SubscriptionState {
   id: string;

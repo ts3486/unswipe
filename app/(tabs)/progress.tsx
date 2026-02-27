@@ -3,7 +3,6 @@
 // TypeScript strict mode.
 
 import { PersonalBestCard } from "@/src/components/PersonalBestCard";
-import { PremiumGate } from "@/src/components/PremiumGate";
 import { ShareStreakCard } from "@/src/components/ShareStreakCard";
 import { WeeklyInsightCard } from "@/src/components/WeeklyInsightCard";
 import { colors } from "@/src/constants/theme";
@@ -169,7 +168,6 @@ export default function ProgressScreen(): React.ReactElement {
 	const {
 		resistRank,
 		resistCount: totalResistCount,
-		isPremium,
 		streak,
 	} = useAppState();
 	const today = getLocalDateString();
@@ -504,19 +502,7 @@ export default function ProgressScreen(): React.ReactElement {
 				Progress
 			</Text>
 
-			{/* Premium gate — free users see this instead of full stats */}
-			{!isPremium && (
-				<PremiumGate
-					headline="Unlock to track your journey"
-					subtext="See your success calendar, streaks, and weekly insights."
-					triggerSource="progress_locked"
-				/>
-			)}
-
-			{/* Full stats content — only shown to premium users */}
-			{isPremium && (
-				<React.Fragment>
-					<Card style={styles.card} mode="contained">
+			<Card style={styles.card} mode="contained">
 						<Card.Content>
 							{/* Month navigation */}
 							<View style={styles.monthNav}>
@@ -721,8 +707,6 @@ export default function ProgressScreen(): React.ReactElement {
 							/>
 						</Card.Content>
 					</Card>
-				</React.Fragment>
-			)}
 
 			<View style={styles.bottomSpacer} />
 		</ScrollView>
