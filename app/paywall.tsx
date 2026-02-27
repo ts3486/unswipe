@@ -1,75 +1,52 @@
-// Paywall screen — one-time purchase redesign.
-// Shows emotional hook, social proof, value props, price block, and CTA.
+// Paywall screen — hard gate after onboarding.
+// Two tiers: $4.99/month or $29.99 lifetime. Non-dismissable.
 // TypeScript strict mode.
 
 import { colors } from "@/src/constants/theme";
 import { useAnalytics } from "@/src/contexts/AnalyticsContext";
 import { useAppState } from "@/src/contexts/AppStateContext";
-import type { PaywallTriggerSource } from "@/src/domain/types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Divider, Text } from "react-native-paper";
+import { router } from "expo-router";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Button, Text } from "react-native-paper";
+import type { PurchasesPackage } from "react-native-purchases";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const PRODUCT_MONTHLY = "unmatch_monthly_499";
+const PRODUCT_LIFETIME = "unmatch_lifetime_2999";
+
+type PlanType = "monthly" | "lifetime";
 
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
 
-interface ValueProp {
+interface FeatureItem {
 	icon: string;
-	title: string;
-	description: string;
+	label: string;
 }
 
-const VALUE_PROPS: ValueProp[] = [
+const FEATURES: FeatureItem[] = [
+	{ icon: "timer-outline", label: "60-second panic reset — anytime, offline" },
 	{
-		icon: "timer-outline",
-		title: "60-second panic reset",
-		description:
-			"A fast, structured protocol to interrupt urges before they take over.",
+		icon: "clipboard-check-outline",
+		label: "Daily check-in — private self-reflection",
 	},
 	{
-		icon: "shield-check-outline",
-		title: "Spend delay cards",
-		description:
-			"Pause before in-app purchases with friction cards that buy you time.",
+		icon: "credit-card-off-outline",
+		label: "Spend delay cards — think before you boost",
 	},
 	{
-		icon: "chart-bar",
-		title: "Track your progress",
-		description:
-			"See streaks, resist rank, and patterns that show how far you've come.",
+		icon: "book-open-variant",
+		label: "7-day starter course — learn the patterns",
 	},
+	{ icon: "chart-line", label: "Progress tracking — streaks, rank, insights" },
 ];
-
-const TRIGGER_MESSAGES: Record<
-	PaywallTriggerSource,
-	{ headline: string; subtext: string }
-> = {
-	settings: {
-		headline: "You've already taken the first step",
-		subtext: "Unlock everything Unmatch has to offer with a single purchase.",
-	},
-	panic_limit: {
-		headline: "You're building real momentum",
-		subtext: "Unlock the full panic reset toolkit to keep that momentum going.",
-	},
-	learn_locked: {
-		headline: "Ready to go deeper?",
-		subtext: "Unlock the full course library to build lasting habits.",
-	},
-	progress_locked: {
-		headline: "Your progress is real",
-		subtext:
-			"Unlock detailed insights to see exactly how much ground you've covered.",
-	},
-	onboarding: {
-		headline: "You've already taken the first step",
-		subtext:
-			"Join thousands of people taking back their time — one resist at a time.",
-	},
-};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -77,53 +54,104 @@ const TRIGGER_MESSAGES: Record<
 
 export default function PaywallScreen(): React.ReactElement {
 	const analytics = useAnalytics();
-	const { unlockPremium } = useAppState();
-	const params = useLocalSearchParams<{ trigger_source?: string }>();
+	const { unlockPremium, isPremium, restorePurchases, offerings } =
+		useAppState();
 
-	const triggerSource: PaywallTriggerSource =
-		(params.trigger_source as PaywallTriggerSource | undefined) ?? "settings";
-
+	const [selectedPlan, setSelectedPlan] = useState<PlanType>("lifetime");
 	const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
+	const [isRestoring, setIsRestoring] = useState<boolean>(false);
 	const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-	const copy = TRIGGER_MESSAGES[triggerSource] ?? TRIGGER_MESSAGES.settings;
+	// Navigate to tabs reactively once isPremium becomes true.
+	// This avoids a race condition where router.replace fires before the
+	// React state update from unlockPremium has re-rendered the tabs layout.
+	useEffect(() => {
+		if (isPremium) {
+			router.replace("/(tabs)");
+		}
+	}, [isPremium]);
 
 	// Fire paywall_viewed on mount.
 	useEffect(() => {
 		analytics.track({
 			name: "paywall_viewed",
-			props: { trigger_source: triggerSource },
+			props: { trigger_source: "hard_gate" },
 		});
-	}, [analytics, triggerSource]);
+	}, [analytics]);
 
-	const handlePurchase = useCallback((): void => {
+	function findPackage(planType: PlanType): PurchasesPackage | null {
+		if (!offerings) return null;
+		const id = planType === "lifetime" ? PRODUCT_LIFETIME : PRODUCT_MONTHLY;
+		return (
+			offerings.availablePackages.find(
+				(p: PurchasesPackage) => p.product.identifier === id,
+			) ?? null
+		);
+	}
+
+	async function handlePurchase(): Promise<void> {
+		const pkg = findPackage(selectedPlan);
+		if (!pkg) {
+			setFeedbackMessage("Check your connection and try again.");
+			return;
+		}
+
 		setIsPurchasing(true);
 		setFeedbackMessage(null);
-		// Stub: in production this calls StoreKit / RevenueCat.
-		// On success, call unlockPremium() and navigate back.
-		setTimeout(async () => {
-			try {
-				await unlockPremium("unmatch_one_time_699");
-				analytics.track({
-					name: "purchase_completed",
-					props: { product_id: "unmatch_one_time_699" },
-				});
-				router.back();
-			} catch {
+
+		try {
+			await unlockPremium(pkg);
+			const productId =
+				selectedPlan === "lifetime" ? PRODUCT_LIFETIME : PRODUCT_MONTHLY;
+			analytics.track({
+				name: "purchase_completed",
+				props: { product_id: productId, period: selectedPlan },
+			});
+			// Navigation is handled by the useEffect watching isPremium.
+		} catch (error: unknown) {
+			const rcError = error as { userCancelled?: boolean };
+			if (rcError.userCancelled) {
+				// User cancelled — dismiss silently.
+			} else {
 				setFeedbackMessage(
 					"Purchase could not be completed. Please try again.",
 				);
-			} finally {
-				setIsPurchasing(false);
 			}
-		}, 800);
-	}, [unlockPremium, analytics]);
+		} finally {
+			setIsPurchasing(false);
+		}
+	}
 
-	const handleRestore = useCallback((): void => {
-		setFeedbackMessage(
-			"Restore purchases is not available yet in this version.",
-		);
-	}, []);
+	async function handleRestore(): Promise<void> {
+		setIsRestoring(true);
+		setFeedbackMessage(null);
+
+		try {
+			await restorePurchases();
+			// If premium was restored, the useEffect watching isPremium handles navigation.
+			// If not, inform the user.
+			// We check after a microtask to let state propagate.
+			setTimeout(() => {
+				setIsRestoring(false);
+				// isPremium change triggers navigation via the useEffect above.
+				// If we're still here, no purchase was found.
+				setFeedbackMessage("No previous purchase found.");
+			}, 300);
+			return;
+		} catch {
+			setFeedbackMessage("Could not restore purchases. Please try again.");
+		}
+		setIsRestoring(false);
+	}
+
+	const isBusy = isPurchasing || isRestoring;
+
+	const ctaLabel =
+		offerings === null
+			? "Loading..."
+			: selectedPlan === "lifetime"
+				? "Get Unmatch — $29.99"
+				: "Subscribe — $4.99/month";
 
 	// ---------------------------------------------------------------------------
 	// Render
@@ -135,87 +163,122 @@ export default function PaywallScreen(): React.ReactElement {
 			contentContainerStyle={styles.content}
 			showsVerticalScrollIndicator={false}
 		>
-			{/* Emotional hook */}
+			{/* Headline */}
 			<View style={styles.header}>
 				<Text variant="headlineMedium" style={styles.headline}>
-					{copy.headline}
+					Take back your time
 				</Text>
 				<Text variant="bodyLarge" style={styles.subtext}>
-					{copy.subtext}
+					Everything you need to be intentional about dating apps.
 				</Text>
 			</View>
 
-			{/* Social proof bar */}
-			<View style={styles.socialProofBar}>
-				<MaterialCommunityIcons
-					name="account-group-outline"
-					size={18}
-					color={colors.secondary}
-				/>
-				<Text variant="bodySmall" style={styles.socialProofText}>
-					Join 4,000+ people taking back their time
-				</Text>
+			{/* Feature list */}
+			<View style={styles.featureList}>
+				{FEATURES.map((feature) => (
+					<View key={feature.label} style={styles.featureRow}>
+						<View style={styles.featureIconWrap}>
+							<MaterialCommunityIcons
+								name={feature.icon as never}
+								size={20}
+								color={colors.primary}
+							/>
+						</View>
+						<Text variant="bodyMedium" style={styles.featureLabel}>
+							{feature.label}
+						</Text>
+					</View>
+				))}
 			</View>
 
-			{/* Value props */}
-			<Card style={styles.valueCard} mode="contained">
-				<Card.Content style={styles.valueCardContent}>
-					{VALUE_PROPS.map((prop, idx) => (
-						<React.Fragment key={prop.title}>
-							<View style={styles.valueRow}>
-								<View style={styles.valueIconWrap}>
-									<MaterialCommunityIcons
-										name={prop.icon as never}
-										size={22}
-										color={colors.primary}
-									/>
-								</View>
-								<View style={styles.valueText}>
-									<Text variant="titleSmall" style={styles.valueTitle}>
-										{prop.title}
-									</Text>
-									<Text variant="bodySmall" style={styles.valueDesc}>
-										{prop.description}
-									</Text>
-								</View>
+			{/* Plan selector */}
+			<View style={styles.planSelector}>
+				<TouchableOpacity
+					style={[
+						styles.planCard,
+						selectedPlan === "monthly" && styles.planCardSelected,
+					]}
+					onPress={() => {
+						setSelectedPlan("monthly");
+					}}
+					accessibilityLabel="Monthly plan — $4.99 per month"
+					accessibilityRole="button"
+					accessibilityState={{ selected: selectedPlan === "monthly" }}
+				>
+					<View style={styles.planCardInner}>
+						<View style={styles.planCardContent}>
+							<View style={styles.boostBadge}>
+								<Text style={styles.boostBadgeText}>
+									Less than one Tinder boost
+								</Text>
 							</View>
-							{idx < VALUE_PROPS.length - 1 && (
-								<Divider style={styles.valueDivider} />
-							)}
-						</React.Fragment>
-					))}
-				</Card.Content>
-			</Card>
+							<Text variant="titleMedium" style={styles.planPrice}>
+								$4.99/month
+							</Text>
+							<Text variant="bodySmall" style={styles.planNote}>
+								Cancel anytime
+							</Text>
+						</View>
+						<View
+							style={[
+								styles.planRadio,
+								selectedPlan === "monthly" && styles.planRadioSelected,
+							]}
+						/>
+					</View>
+				</TouchableOpacity>
 
-			{/* Price block */}
-			<Card style={styles.priceCard} mode="contained">
-				<Card.Content style={styles.priceCardContent}>
-					<Text variant="displaySmall" style={styles.priceAmount}>
-						$6.99
-					</Text>
-					<Text variant="titleSmall" style={styles.priceLabel}>
-						One-time purchase. No subscription. No account.
-					</Text>
-					<Text variant="bodySmall" style={styles.priceComparison}>
-						Less than one Tinder boost.
-					</Text>
-				</Card.Content>
-			</Card>
+				<TouchableOpacity
+					style={[
+						styles.planCard,
+						selectedPlan === "lifetime" && styles.planCardSelected,
+					]}
+					onPress={() => {
+						setSelectedPlan("lifetime");
+					}}
+					accessibilityLabel="Lifetime plan — $29.99 one-time purchase"
+					accessibilityRole="button"
+					accessibilityState={{ selected: selectedPlan === "lifetime" }}
+				>
+					<View style={styles.planCardInner}>
+						<View style={styles.planCardContent}>
+							<View style={styles.bestValueBadge}>
+								<Text style={styles.bestValueText}>Best value</Text>
+							</View>
+							<Text variant="titleMedium" style={styles.planPrice}>
+								$29.99
+							</Text>
+							<Text variant="bodySmall" style={styles.planNote}>
+								One-time purchase — full access forever
+							</Text>
+						</View>
+						<View
+							style={[
+								styles.planRadio,
+								selectedPlan === "lifetime" && styles.planRadioSelected,
+							]}
+						/>
+					</View>
+				</TouchableOpacity>
+			</View>
 
 			{/* CTA */}
 			<Button
 				mode="contained"
 				onPress={handlePurchase}
 				loading={isPurchasing}
-				disabled={isPurchasing}
+				disabled={isBusy || offerings === null}
 				style={styles.ctaButton}
 				contentStyle={styles.ctaButtonContent}
 				labelStyle={styles.ctaButtonLabel}
-				accessibilityLabel="Unlock Unmatch — one-time purchase for $6.99"
+				accessibilityLabel={ctaLabel}
 				accessibilityRole="button"
-				accessibilityState={{ disabled: isPurchasing, busy: isPurchasing }}
+				accessibilityState={{
+					disabled: isBusy || offerings === null,
+					busy: isBusy,
+				}}
 			>
-				Unlock Unmatch
+				{ctaLabel}
 			</Button>
 
 			{/* Trust signals */}
@@ -246,6 +309,8 @@ export default function PaywallScreen(): React.ReactElement {
 			<Button
 				mode="text"
 				onPress={handleRestore}
+				loading={isRestoring}
+				disabled={isBusy}
 				textColor={colors.muted}
 				style={styles.restoreButton}
 				labelStyle={styles.restoreLabel}
@@ -254,6 +319,13 @@ export default function PaywallScreen(): React.ReactElement {
 			>
 				Restore purchase
 			</Button>
+
+			{/* Terms — only shown when monthly selected */}
+			{selectedPlan === "monthly" && (
+				<Text variant="bodySmall" style={styles.termsText}>
+					Subscription renews monthly. Cancel anytime.
+				</Text>
+			)}
 
 			{/* Feedback message */}
 			{feedbackMessage !== null && (
@@ -301,92 +373,100 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		lineHeight: 26,
 	},
-	// Social proof
-	socialProofBar: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 6,
-		backgroundColor: colors.surface,
-		borderRadius: 10,
-		paddingVertical: 10,
-		paddingHorizontal: 16,
-		borderWidth: 1,
-		borderColor: colors.border,
-	},
-	socialProofText: {
-		color: colors.secondary,
-		fontWeight: "600",
-	},
-	// Value props card
-	valueCard: {
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-	},
-	valueCardContent: {
+	// Feature list
+	featureList: {
+		gap: 12,
 		paddingVertical: 4,
 	},
-	valueRow: {
+	featureRow: {
 		flexDirection: "row",
-		alignItems: "flex-start",
-		gap: 14,
-		paddingVertical: 14,
+		alignItems: "center",
+		gap: 12,
 	},
-	valueIconWrap: {
-		width: 38,
-		height: 38,
+	featureIconWrap: {
+		width: 36,
+		height: 36,
 		borderRadius: 10,
 		backgroundColor: "#0F1D3A",
 		alignItems: "center",
 		justifyContent: "center",
 		flexShrink: 0,
 	},
-	valueText: {
-		flex: 1,
-		gap: 3,
-	},
-	valueTitle: {
+	featureLabel: {
 		color: colors.text,
-		fontWeight: "600",
+		flex: 1,
 	},
-	valueDesc: {
-		color: colors.muted,
-		lineHeight: 18,
+	// Plan selector
+	planSelector: {
+		gap: 10,
 	},
-	valueDivider: {
-		backgroundColor: colors.border,
-		marginLeft: 52,
-	},
-	// Price block
-	priceCard: {
-		backgroundColor: "#0F1D3A",
+	planCard: {
+		backgroundColor: colors.surface,
 		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.primary,
+		borderWidth: 2,
+		borderColor: colors.border,
+		paddingVertical: 16,
+		paddingHorizontal: 16,
 	},
-	priceCardContent: {
+	planCardInner: {
+		flexDirection: "row",
 		alignItems: "center",
-		paddingVertical: 12,
+		gap: 12,
+	},
+	planCardContent: {
+		flex: 1,
 		gap: 4,
 	},
-	priceAmount: {
+	planCardSelected: {
+		borderColor: colors.primary,
+		backgroundColor: "#0F1D3A",
+	},
+	planPrice: {
 		color: colors.text,
 		fontWeight: "700",
-		textAlign: "center",
-		letterSpacing: -0.5,
 	},
-	priceLabel: {
+	planNote: {
 		color: colors.muted,
-		textAlign: "center",
-		fontWeight: "400",
 	},
-	priceComparison: {
-		color: colors.warning,
-		textAlign: "center",
-		fontWeight: "500",
-		marginTop: 2,
+	planRadio: {
+		width: 22,
+		height: 22,
+		borderRadius: 11,
+		borderWidth: 2,
+		borderColor: colors.border,
+		flexShrink: 0,
+	},
+	planRadioSelected: {
+		borderColor: colors.primary,
+		backgroundColor: colors.primary,
+	},
+	boostBadge: {
+		backgroundColor: colors.primary,
+		borderRadius: 6,
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		alignSelf: "flex-start",
+	},
+	boostBadgeText: {
+		color: "#FFFFFF",
+		fontSize: 11,
+		fontWeight: "700",
+		textTransform: "uppercase",
+		letterSpacing: 0.5,
+	},
+	bestValueBadge: {
+		backgroundColor: colors.warning,
+		borderRadius: 6,
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		alignSelf: "flex-start",
+	},
+	bestValueText: {
+		color: colors.background,
+		fontSize: 11,
+		fontWeight: "700",
+		textTransform: "uppercase",
+		letterSpacing: 0.5,
 	},
 	// CTA button
 	ctaButton: {
@@ -425,6 +505,13 @@ const styles = StyleSheet.create({
 	restoreLabel: {
 		fontSize: 13,
 		textDecorationLine: "underline",
+	},
+	// Terms
+	termsText: {
+		color: colors.muted,
+		textAlign: "center",
+		fontSize: 12,
+		lineHeight: 16,
 	},
 	// Feedback
 	feedbackBox: {
