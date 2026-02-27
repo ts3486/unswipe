@@ -174,6 +174,38 @@ export async function countSpendAvoidedByDate(
 }
 
 /**
+ * Counts urge events with outcome = 'success' within the current calendar week
+ * (Monday to today, inclusive) in the device's local timezone.
+ *
+ * The week start is the most recent Monday (or today if today is Monday).
+ * Returns 0 if db returns null.
+ */
+export async function getWeeklySuccessCount(
+  db: SQLiteDatabase,
+  todayLocal: string,
+): Promise<number> {
+  // Compute Monday of the current week in local time.
+  const todayDate = new Date(`${todayLocal}T00:00:00`);
+  const dayOfWeek = todayDate.getDay(); // 0 = Sun, 1 = Mon, …, 6 = Sat
+  // Days since Monday: Sun→6, Mon→0, Tue→1, …, Sat→5
+  const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const mondayMs = todayDate.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000;
+
+  const weekStart = new Date(mondayMs).toISOString();
+  const weekEnd = new Date(`${todayLocal}T00:00:00`).getTime() + 24 * 60 * 60 * 1000;
+  const weekEndIso = new Date(weekEnd).toISOString();
+
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM urge_event
+     WHERE started_at >= ? AND started_at < ?
+       AND outcome = 'success';`,
+    [weekStart, weekEndIso],
+  );
+
+  return row?.count ?? 0;
+}
+
+/**
  * Returns all urge events within an inclusive local date range [startDate, endDate],
  * ordered by started_at ascending.
  */
@@ -193,4 +225,124 @@ export async function getUrgeEventsInRange(
   );
 
   return rows.map(rowToUrgeEvent);
+}
+
+// ---------------------------------------------------------------------------
+// Aggregation types
+// ---------------------------------------------------------------------------
+
+export interface DayOfWeekCount {
+  /** 0 = Sunday, 1 = Monday, …, 6 = Saturday */
+  dayOfWeek: number;
+  count: number;
+}
+
+export interface TimeOfDayCount {
+  /** 'morning' = 05:00–11:59, 'afternoon' = 12:00–17:59, 'evening' = 18:00–04:59 */
+  bucket: 'morning' | 'afternoon' | 'evening';
+  count: number;
+}
+
+// ---------------------------------------------------------------------------
+// Aggregation query helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Classifies a UTC ISO-8601 timestamp into a local time-of-day bucket.
+ * morning:   local 05:00 – 11:59
+ * afternoon: local 12:00 – 17:59
+ * evening:   local 18:00 – 04:59 (next day)
+ */
+function getTimeOfDayBucket(utcIso: string): 'morning' | 'afternoon' | 'evening' {
+  const d = new Date(utcIso);
+  const hour = d.getHours(); // local hours
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'afternoon';
+  return 'evening';
+}
+
+/**
+ * Returns the count of successful urge events grouped by local day-of-week.
+ * Scans all events in DB — intended for lifetime aggregation.
+ * Result has exactly 7 entries, one per day-of-week (0=Sun…6=Sat).
+ */
+export async function getUrgeCountByDayOfWeek(
+  db: SQLiteDatabase,
+): Promise<DayOfWeekCount[]> {
+  const rows = await db.getAllAsync<{ started_at: string }>(
+    `SELECT started_at FROM urge_event WHERE outcome = 'success' ORDER BY started_at ASC;`,
+    [],
+  );
+
+  const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  for (const row of rows) {
+    const dow = new Date(row.started_at).getDay(); // 0=Sun..6=Sat
+    counts[dow] = (counts[dow] ?? 0) + 1;
+  }
+
+  return [0, 1, 2, 3, 4, 5, 6].map((dow) => ({
+    dayOfWeek: dow,
+    count: counts[dow] ?? 0,
+  }));
+}
+
+/**
+ * Returns the count of successful urge events grouped by local time-of-day bucket.
+ * morning / afternoon / evening — see getTimeOfDayBucket for boundaries.
+ */
+export async function getUrgeCountByTimeOfDay(
+  db: SQLiteDatabase,
+): Promise<TimeOfDayCount[]> {
+  const rows = await db.getAllAsync<{ started_at: string }>(
+    `SELECT started_at FROM urge_event WHERE outcome = 'success' ORDER BY started_at ASC;`,
+    [],
+  );
+
+  const counts: Record<string, number> = { morning: 0, afternoon: 0, evening: 0 };
+  for (const row of rows) {
+    const bucket = getTimeOfDayBucket(row.started_at);
+    counts[bucket] = (counts[bucket] ?? 0) + 1;
+  }
+
+  return (['morning', 'afternoon', 'evening'] as const).map((bucket) => ({
+    bucket,
+    count: counts[bucket] ?? 0,
+  }));
+}
+
+/**
+ * Counts the total number of completed panic sessions (protocol_completed = 1).
+ * Used to determine how many free resets the user has used.
+ * Free tier: 1 reset allowed; 2nd+ reset requires premium.
+ */
+export async function countCompletedPanicSessions(
+  db: SQLiteDatabase,
+): Promise<number> {
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM urge_event WHERE protocol_completed = 1;`,
+    [],
+  );
+  return row?.count ?? 0;
+}
+
+/**
+ * Returns the count of successful urge events for the given date range.
+ * Used for weekly comparison (this week vs last week).
+ */
+export async function getSuccessCountInRange(
+  db: SQLiteDatabase,
+  startDate: string,
+  endDate: string,
+): Promise<number> {
+  const rangeStart = localDateToUtcRange(startDate).start;
+  const rangeEnd = localDateToUtcRange(endDate).end;
+
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM urge_event
+     WHERE started_at >= ? AND started_at < ?
+       AND outcome = 'success';`,
+    [rangeStart, rangeEnd],
+  );
+
+  return row?.count ?? 0;
 }

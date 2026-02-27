@@ -15,6 +15,7 @@ import {
 import { parseLocalDate } from '@/src/utils/date';
 import { colors } from '@/src/constants/theme';
 import type { DailyCheckin, UrgeEvent } from '@/src/domain/types';
+import { getCatalog } from '@/src/data/seed-loader';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -96,6 +97,13 @@ export default function DayDetailScreen(): React.ReactElement {
     if (kind === 'check') return 'Checking';
     if (kind === 'spend') return 'Spending';
     return kind;
+  }
+
+  function resolveActionTitle(actionId: string): string {
+    if (actionId.length === 0) return '';
+    const catalog = getCatalog();
+    const action = catalog.actions.find((a) => a.id === actionId);
+    return action?.title ?? actionId;
   }
 
   // ---------------------------------------------------------------------------
@@ -204,7 +212,7 @@ export default function DayDetailScreen(): React.ReactElement {
                       </Text>
                       {ev.action_id.length > 0 && (
                         <Text variant="bodySmall" style={styles.muted}>
-                          Action: {ev.action_id}
+                          Coping: {resolveActionTitle(ev.action_id)}
                         </Text>
                       )}
                     </View>

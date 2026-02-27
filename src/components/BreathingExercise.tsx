@@ -1,21 +1,21 @@
 // BreathingExercise — animated breathing guide component.
-// Uses React Native Animated API. No emojis. TypeScript strict mode.
+// Delegates the animated circle to BreathingCircle (reanimated + haptics).
+// No emojis. TypeScript strict mode.
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
-import { colors } from '@/src/constants/theme';
 import {
-  BREATHING_EXHALE,
-  BREATHING_HOLD,
-  BREATHING_INHALE,
-} from '@/src/constants/config';
+	BREATHING_EXHALE,
+	BREATHING_HOLD,
+	BREATHING_INHALE,
+} from "@/src/constants/config";
+import { colors } from "@/src/constants/theme";
+import type React from "react";
+import { type AccessibilityRole, StyleSheet, View } from "react-native";
+import { Text } from "react-native-paper";
+import { BreathingCircle, type BreathingPhase } from "./BreathingCircle";
 
 // ---------------------------------------------------------------------------
 // Phase calculation
 // ---------------------------------------------------------------------------
-
-type BreathingPhase = 'Inhale' | 'Hold' | 'Exhale';
 
 const CYCLE_DURATION = BREATHING_INHALE + BREATHING_HOLD + BREATHING_EXHALE; // 12s
 
@@ -23,41 +23,47 @@ const CYCLE_DURATION = BREATHING_INHALE + BREATHING_HOLD + BREATHING_EXHALE; // 
  * Derives the current breathing phase and time remaining in that phase
  * from the total elapsed time within one cycle.
  */
-function getPhase(timeLeft: number, totalDuration: number): {
-  phase: BreathingPhase;
-  phaseTimeLeft: number;
+function getPhase(
+	timeLeft: number,
+	totalDuration: number,
+): {
+	phase: BreathingPhase;
+	phaseTimeLeft: number;
 } {
-  const elapsed = totalDuration - timeLeft;
-  const positionInCycle = elapsed % CYCLE_DURATION;
+	const elapsed = totalDuration - timeLeft;
+	const positionInCycle = elapsed % CYCLE_DURATION;
 
-  if (positionInCycle < BREATHING_INHALE) {
-    return {
-      phase: 'Inhale',
-      phaseTimeLeft: BREATHING_INHALE - positionInCycle,
-    };
-  }
+	if (positionInCycle < BREATHING_INHALE) {
+		return {
+			phase: "Inhale",
+			phaseTimeLeft: BREATHING_INHALE - positionInCycle,
+		};
+	}
 
-  if (positionInCycle < BREATHING_INHALE + BREATHING_HOLD) {
-    return {
-      phase: 'Hold',
-      phaseTimeLeft: BREATHING_INHALE + BREATHING_HOLD - positionInCycle,
-    };
-  }
+	if (positionInCycle < BREATHING_INHALE + BREATHING_HOLD) {
+		return {
+			phase: "Hold",
+			phaseTimeLeft: BREATHING_INHALE + BREATHING_HOLD - positionInCycle,
+		};
+	}
 
-  return {
-    phase: 'Exhale',
-    phaseTimeLeft: CYCLE_DURATION - positionInCycle,
-  };
+	return {
+		phase: "Exhale",
+		phaseTimeLeft: CYCLE_DURATION - positionInCycle,
+	};
 }
 
 // ---------------------------------------------------------------------------
 // Phase display config
 // ---------------------------------------------------------------------------
 
-const PHASE_CONFIG: Record<BreathingPhase, { color: string; instruction: string }> = {
-  Inhale: { color: colors.primary, instruction: 'breathe in slowly' },
-  Hold: { color: colors.secondary, instruction: 'hold gently' },
-  Exhale: { color: colors.success, instruction: 'release slowly' },
+const PHASE_CONFIG: Record<
+	BreathingPhase,
+	{ color: string; instruction: string }
+> = {
+	Inhale: { color: colors.primary, instruction: "breathe in slowly" },
+	Hold: { color: colors.secondary, instruction: "hold gently" },
+	Exhale: { color: colors.success, instruction: "release slowly" },
 };
 
 // ---------------------------------------------------------------------------
@@ -65,10 +71,10 @@ const PHASE_CONFIG: Record<BreathingPhase, { color: string; instruction: string 
 // ---------------------------------------------------------------------------
 
 interface BreathingExerciseProps {
-  /** Seconds remaining in the overall session. */
-  timeLeft: number;
-  /** Total session duration in seconds (used to derive elapsed time). */
-  totalDuration: number;
+	/** Seconds remaining in the overall session. */
+	timeLeft: number;
+	/** Total session duration in seconds (used to derive elapsed time). */
+	totalDuration: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -76,130 +82,76 @@ interface BreathingExerciseProps {
 // ---------------------------------------------------------------------------
 
 /**
- * Shows current breathing phase with a pulsing circle animation
- * and countdown text.
+ * Shows current breathing phase with an animated circle (via BreathingCircle)
+ * and a countdown timer. Haptic feedback is triggered inside BreathingCircle.
  *
- * Cycle: 4s Inhale → 2s Hold → 6s Exhale → repeat
+ * Cycle: 4s Inhale -> 2s Hold -> 6s Exhale -> repeat
  */
 export function BreathingExercise({
-  timeLeft,
-  totalDuration,
+	timeLeft,
+	totalDuration,
 }: BreathingExerciseProps): React.ReactElement {
-  const scaleAnim = useRef(new Animated.Value(0.7)).current;
-  const opacityAnim = useRef(new Animated.Value(0.6)).current;
-  const currentPhaseRef = useRef<BreathingPhase | null>(null);
+	const { phase, phaseTimeLeft } = getPhase(timeLeft, totalDuration);
+	const config = PHASE_CONFIG[phase];
 
-  const { phase, phaseTimeLeft } = getPhase(timeLeft, totalDuration);
-  const config = PHASE_CONFIG[phase];
+	const minutes = Math.floor(timeLeft / 60);
+	const seconds = timeLeft % 60;
+	const timerDisplay =
+		minutes > 0
+			? `${minutes}:${String(seconds).padStart(2, "0")}`
+			: `${seconds}s`;
 
-  // Animate the circle whenever the phase changes.
-  useEffect(() => {
-    if (currentPhaseRef.current === phase) {
-      return;
-    }
-    currentPhaseRef.current = phase;
+	return (
+		<View style={styles.container}>
+			{/* Animated circle with haptics */}
+			<BreathingCircle phase={phase} phaseTimeLeft={phaseTimeLeft} />
 
-    if (phase === 'Inhale') {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: BREATHING_INHALE * 1_000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: BREATHING_INHALE * 1_000,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else if (phase === 'Hold') {
-      // No scale change during hold; keep at full size.
-      Animated.timing(opacityAnim, {
-        toValue: 0.9,
-        duration: BREATHING_HOLD * 1_000,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      // Exhale — shrink back.
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0.7,
-          duration: BREATHING_EXHALE * 1_000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0.6,
-          duration: BREATHING_EXHALE * 1_000,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [phase, scaleAnim, opacityAnim]);
+			{/* Phase label — accessibilityLiveRegion announces phase transitions to screen readers */}
+			<Text
+				variant="displaySmall"
+				style={[styles.phaseText, { color: config.color }]}
+				accessibilityLiveRegion="polite"
+				accessibilityLabel={`${phase} — ${config.instruction}`}
+				accessibilityRole={"text" as AccessibilityRole}
+			>
+				{phase}
+			</Text>
+			<Text variant="bodyMedium" style={styles.instructionText}>
+				{config.instruction}
+			</Text>
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-  const timerDisplay =
-    minutes > 0
-      ? `${minutes}:${String(seconds).padStart(2, '0')}`
-      : `${seconds}s`;
+			{/* Overall timer */}
+			<View style={styles.timerContainer}>
+				<Text variant="labelMedium" style={styles.timerLabel}>
+					Session remaining
+				</Text>
+				<Text variant="headlineMedium" style={styles.timerText}>
+					{timerDisplay}
+				</Text>
+			</View>
 
-  return (
-    <View style={styles.container}>
-      {/* Animated circle */}
-      <View style={styles.circleWrapper}>
-        <Animated.View
-          style={[
-            styles.outerRing,
-            {
-              borderColor: config.color,
-              opacity: opacityAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.innerCircle,
-            {
-              backgroundColor: config.color,
-              opacity: Animated.multiply(opacityAnim, 0.25),
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        />
-      </View>
-
-      {/* Phase label */}
-      <Text variant="displaySmall" style={[styles.phaseText, { color: config.color }]}>
-        {phase}
-      </Text>
-      <Text variant="bodyMedium" style={styles.instructionText}>
-        {config.instruction}
-      </Text>
-      <Text variant="labelLarge" style={styles.phaseCountdown}>
-        {Math.ceil(phaseTimeLeft)}s
-      </Text>
-
-      {/* Overall timer */}
-      <View style={styles.timerContainer}>
-        <Text variant="labelMedium" style={styles.timerLabel}>
-          Session remaining
-        </Text>
-        <Text variant="headlineMedium" style={styles.timerText}>
-          {timerDisplay}
-        </Text>
-      </View>
-
-      {/* Cycle guide */}
-      <View style={styles.cycleGuide}>
-        <CycleStep label="Inhale" duration={BREATHING_INHALE} active={phase === 'Inhale'} />
-        <View style={styles.cycleDivider} />
-        <CycleStep label="Hold" duration={BREATHING_HOLD} active={phase === 'Hold'} />
-        <View style={styles.cycleDivider} />
-        <CycleStep label="Exhale" duration={BREATHING_EXHALE} active={phase === 'Exhale'} />
-      </View>
-    </View>
-  );
+			{/* Cycle guide */}
+			<View style={styles.cycleGuide}>
+				<CycleStep
+					label="Inhale"
+					duration={BREATHING_INHALE}
+					active={phase === "Inhale"}
+				/>
+				<View style={styles.cycleDivider} />
+				<CycleStep
+					label="Hold"
+					duration={BREATHING_HOLD}
+					active={phase === "Hold"}
+				/>
+				<View style={styles.cycleDivider} />
+				<CycleStep
+					label="Exhale"
+					duration={BREATHING_EXHALE}
+					active={phase === "Exhale"}
+				/>
+			</View>
+		</View>
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -207,28 +159,35 @@ export function BreathingExercise({
 // ---------------------------------------------------------------------------
 
 interface CycleStepProps {
-  label: string;
-  duration: number;
-  active: boolean;
+	label: string;
+	duration: number;
+	active: boolean;
 }
 
-function CycleStep({ label, duration, active }: CycleStepProps): React.ReactElement {
-  return (
-    <View style={styles.cycleStep}>
-      <Text
-        variant="labelMedium"
-        style={[styles.cycleStepLabel, active && styles.cycleStepLabelActive]}
-      >
-        {label}
-      </Text>
-      <Text
-        variant="labelSmall"
-        style={[styles.cycleStepDuration, active && styles.cycleStepDurationActive]}
-      >
-        {duration}s
-      </Text>
-    </View>
-  );
+function CycleStep({
+	label,
+	duration,
+	active,
+}: CycleStepProps): React.ReactElement {
+	return (
+		<View style={styles.cycleStep}>
+			<Text
+				variant="labelMedium"
+				style={[styles.cycleStepLabel, active && styles.cycleStepLabelActive]}
+			>
+				{label}
+			</Text>
+			<Text
+				variant="labelSmall"
+				style={[
+					styles.cycleStepDuration,
+					active && styles.cycleStepDurationActive,
+				]}
+			>
+				{duration}s
+			</Text>
+		</View>
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -236,85 +195,60 @@ function CycleStep({ label, duration, active }: CycleStepProps): React.ReactElem
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    gap: 12,
-  },
-  circleWrapper: {
-    width: 200,
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  outerRing: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 2,
-  },
-  innerCircle: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-  },
-  phaseText: {
-    color: colors.primary,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  instructionText: {
-    color: colors.muted,
-    fontStyle: 'italic',
-  },
-  phaseCountdown: {
-    color: colors.text,
-    marginTop: 2,
-  },
-  timerContainer: {
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 2,
-  },
-  timerLabel: {
-    color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  timerText: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  cycleGuide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 24,
-    gap: 8,
-  },
-  cycleDivider: {
-    width: 24,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  cycleStep: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  cycleStepLabel: {
-    color: colors.muted,
-  },
-  cycleStepLabelActive: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  cycleStepDuration: {
-    color: colors.border,
-  },
-  cycleStepDurationActive: {
-    color: colors.muted,
-  },
+	container: {
+		alignItems: "center",
+		paddingVertical: 24,
+		gap: 12,
+	},
+	phaseText: {
+		fontWeight: "700",
+		letterSpacing: 1,
+	},
+	instructionText: {
+		color: colors.muted,
+		fontStyle: "italic",
+	},
+	timerContainer: {
+		alignItems: "center",
+		marginTop: 8,
+		gap: 2,
+	},
+	timerLabel: {
+		color: colors.muted,
+		textTransform: "uppercase",
+		letterSpacing: 1,
+	},
+	timerText: {
+		color: colors.text,
+		fontWeight: "600",
+	},
+	cycleGuide: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginTop: 16,
+		paddingHorizontal: 24,
+		gap: 8,
+	},
+	cycleDivider: {
+		width: 24,
+		height: 1,
+		backgroundColor: colors.border,
+	},
+	cycleStep: {
+		alignItems: "center",
+		gap: 2,
+	},
+	cycleStepLabel: {
+		color: colors.muted,
+	},
+	cycleStepLabelActive: {
+		color: colors.text,
+		fontWeight: "700",
+	},
+	cycleStepDuration: {
+		color: colors.border,
+	},
+	cycleStepDurationActive: {
+		color: colors.muted,
+	},
 });

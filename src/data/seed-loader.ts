@@ -71,6 +71,7 @@ interface RawCatalog {
   actions: RawAction[];
   spendDelayCards: RawSpendDelayCard[];
   copy: RawCopy;
+  motivation_messages: string[];
 }
 
 interface RawStarterDay {
@@ -168,6 +169,7 @@ export function getCatalog(): Catalog {
     spend_item_types: rawCatalog.spendItemTypes.map(mapSpendItemType),
     spend_delay_cards: rawCatalog.spendDelayCards.map(mapSpendDelayCard),
     copy: mapCopy(rawCatalog.copy),
+    motivation_messages: rawCatalog.motivation_messages ?? [],
   };
 
   return _catalog;

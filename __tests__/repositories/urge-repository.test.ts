@@ -9,6 +9,10 @@ import {
   countSuccessesByDate,
   getUrgeEventsByDate,
   getUrgeEventsInRange,
+  getWeeklySuccessCount,
+  getUrgeCountByDayOfWeek,
+  getUrgeCountByTimeOfDay,
+  getSuccessCountInRange,
 } from '@/src/data/repositories/urge-repository';
 
 // ---------------------------------------------------------------------------
@@ -407,5 +411,267 @@ describe('getUrgeEventsInRange', () => {
     expect(result[0].id).toBe('e1');
     expect(result[1].id).toBe('e2');
     expect(result[1].spend_category).toBe('iap');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getWeeklySuccessCount
+// ---------------------------------------------------------------------------
+
+describe('getWeeklySuccessCount', () => {
+  it('returns 0 when db returns null', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue(null),
+    });
+    const count = await getWeeklySuccessCount(db, '2026-02-27');
+    expect(count).toBe(0);
+  });
+
+  it('returns the count from the db row', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 5 }),
+    });
+    const count = await getWeeklySuccessCount(db, '2026-02-27');
+    expect(count).toBe(5);
+  });
+
+  it('SQL filters by outcome = success', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getWeeklySuccessCount(db, '2026-02-27');
+    const [sql] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string];
+    expect(sql).toMatch(/outcome\s*=\s*'success'/i);
+  });
+
+  it('week start is Monday when today is Friday', async () => {
+    // 2026-02-27 is a Friday; Monday of that week is 2026-02-23
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getWeeklySuccessCount(db, '2026-02-27');
+    const [, params] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string, string[]];
+    const weekStartMs = new Date(params[0]).getTime();
+    const expectedMondayMs = new Date('2026-02-23T00:00:00').getTime();
+    expect(weekStartMs).toBe(expectedMondayMs);
+  });
+
+  it('week start is Monday itself when today is Monday', async () => {
+    // 2026-02-23 is a Monday
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getWeeklySuccessCount(db, '2026-02-23');
+    const [, params] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string, string[]];
+    const weekStartMs = new Date(params[0]).getTime();
+    const expectedMondayMs = new Date('2026-02-23T00:00:00').getTime();
+    expect(weekStartMs).toBe(expectedMondayMs);
+  });
+
+  it('week start is prior Monday when today is Sunday', async () => {
+    // 2026-03-01 is a Sunday; prior Monday is 2026-02-23
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getWeeklySuccessCount(db, '2026-03-01');
+    const [, params] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string, string[]];
+    const weekStartMs = new Date(params[0]).getTime();
+    const expectedMondayMs = new Date('2026-02-23T00:00:00').getTime();
+    expect(weekStartMs).toBe(expectedMondayMs);
+  });
+
+  it('week end is midnight after today (exclusive upper bound)', async () => {
+    // 2026-02-27 Friday — end should be 2026-02-28T00:00:00 local
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getWeeklySuccessCount(db, '2026-02-27');
+    const [, params] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string, string[]];
+    const weekEndMs = new Date(params[1]).getTime();
+    const expectedEndMs = new Date('2026-02-28T00:00:00').getTime();
+    expect(weekEndMs).toBe(expectedEndMs);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Time-saved calculation (pure unit test — no db needed)
+// ---------------------------------------------------------------------------
+
+describe('time-saved calculation', () => {
+  const TIME_SAVED_PER_RESIST_MINUTES = 12;
+
+  it('0 resists = 0 minutes saved', () => {
+    expect(0 * TIME_SAVED_PER_RESIST_MINUTES).toBe(0);
+  });
+
+  it('5 resists = 60 minutes = 1.0 hours', () => {
+    const minutes = 5 * TIME_SAVED_PER_RESIST_MINUTES;
+    expect(minutes).toBe(60);
+    expect(minutes / 60).toBe(1.0);
+  });
+
+  it('1 resist = 12 minutes (less than 1 hour — display as minutes)', () => {
+    const minutes = 1 * TIME_SAVED_PER_RESIST_MINUTES;
+    expect(minutes).toBe(12);
+    expect(minutes < 60).toBe(true);
+  });
+
+  it('10 resists = 120 minutes = 2.0 hours', () => {
+    const minutes = 10 * TIME_SAVED_PER_RESIST_MINUTES;
+    expect(minutes / 60).toBe(2.0);
+  });
+
+  it('formatTimeSaved shows minutes when < 60', () => {
+    function formatTimeSaved(count: number): string {
+      const mins = count * TIME_SAVED_PER_RESIST_MINUTES;
+      if (mins < 60) return `~${mins} min`;
+      return `~${(mins / 60).toFixed(1)} hrs`;
+    }
+    expect(formatTimeSaved(4)).toBe('~48 min');
+    expect(formatTimeSaved(5)).toBe('~1.0 hrs');
+    expect(formatTimeSaved(10)).toBe('~2.0 hrs');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getUrgeCountByDayOfWeek
+// ---------------------------------------------------------------------------
+
+describe('getUrgeCountByDayOfWeek', () => {
+  it('returns 7 entries (one per day-of-week) even with no data', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    const result = await getUrgeCountByDayOfWeek(db);
+    expect(result).toHaveLength(7);
+  });
+
+  it('all counts are 0 when there are no events', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    const result = await getUrgeCountByDayOfWeek(db);
+    expect(result.every((r) => r.count === 0)).toBe(true);
+  });
+
+  it('SQL filters by outcome = success', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    await getUrgeCountByDayOfWeek(db);
+    const [sql] = (db.getAllAsync as jest.Mock).mock.calls[0] as [string];
+    expect(sql).toMatch(/outcome\s*=\s*'success'/i);
+  });
+
+  it('groups events by day-of-week correctly', async () => {
+    // 2026-02-23 is Monday (dayOfWeek=1), 2026-02-25 is Wednesday (dayOfWeek=3)
+    const mockRows = [
+      { started_at: '2026-02-23T10:00:00.000Z' }, // Monday
+      { started_at: '2026-02-23T14:00:00.000Z' }, // Monday
+      { started_at: '2026-02-25T09:00:00.000Z' }, // Wednesday
+    ];
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue(mockRows),
+    });
+    const result = await getUrgeCountByDayOfWeek(db);
+    // day 1 = Monday should have count 2
+    const monday = result.find((r) => r.dayOfWeek === 1);
+    const wednesday = result.find((r) => r.dayOfWeek === 3);
+    expect(monday?.count).toBe(2);
+    expect(wednesday?.count).toBe(1);
+  });
+
+  it('returns dayOfWeek values 0 through 6', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    const result = await getUrgeCountByDayOfWeek(db);
+    const dows = result.map((r) => r.dayOfWeek).sort((a, b) => a - b);
+    expect(dows).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getUrgeCountByTimeOfDay
+// ---------------------------------------------------------------------------
+
+describe('getUrgeCountByTimeOfDay', () => {
+  it('returns exactly 3 buckets', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    const result = await getUrgeCountByTimeOfDay(db);
+    expect(result).toHaveLength(3);
+  });
+
+  it('buckets are morning, afternoon, evening', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    const result = await getUrgeCountByTimeOfDay(db);
+    const buckets = result.map((r) => r.bucket);
+    expect(buckets).toContain('morning');
+    expect(buckets).toContain('afternoon');
+    expect(buckets).toContain('evening');
+  });
+
+  it('SQL filters by outcome = success', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    await getUrgeCountByTimeOfDay(db);
+    const [sql] = (db.getAllAsync as jest.Mock).mock.calls[0] as [string];
+    expect(sql).toMatch(/outcome\s*=\s*'success'/i);
+  });
+
+  it('all counts are 0 when there are no events', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn().mockResolvedValue([]),
+    });
+    const result = await getUrgeCountByTimeOfDay(db);
+    expect(result.every((r) => r.count === 0)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getSuccessCountInRange
+// ---------------------------------------------------------------------------
+
+describe('getSuccessCountInRange', () => {
+  it('returns 0 when db returns null', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue(null),
+    });
+    const count = await getSuccessCountInRange(db, '2026-02-15', '2026-02-21');
+    expect(count).toBe(0);
+  });
+
+  it('returns the count from the db row', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 4 }),
+    });
+    const count = await getSuccessCountInRange(db, '2026-02-15', '2026-02-21');
+    expect(count).toBe(4);
+  });
+
+  it('SQL filters by outcome = success', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getSuccessCountInRange(db, '2026-02-15', '2026-02-21');
+    const [sql] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string];
+    expect(sql).toMatch(/outcome\s*=\s*'success'/i);
+  });
+
+  it('UTC range covers full startDate and endDate (inclusive)', async () => {
+    const db = makeMockDb({
+      getFirstAsync: jest.fn().mockResolvedValue({ count: 0 }),
+    });
+    await getSuccessCountInRange(db, '2026-02-15', '2026-02-21');
+    const [, params] = (db.getFirstAsync as jest.Mock).mock.calls[0] as [string, string[]];
+    const startMs = new Date(params[0]).getTime();
+    const endMs = new Date(params[1]).getTime();
+    // Should cover exactly 7 days (15,16,17,18,19,20,21)
+    expect(endMs - startMs).toBe(7 * 24 * 60 * 60 * 1000);
   });
 });

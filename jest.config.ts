@@ -25,8 +25,12 @@ const config: Config = {
   },
 
   // Map @/ to the repo root, matching the tsconfig paths alias.
+  // expo-notifications uses ESM and cannot be imported directly in Jest's
+  // Node/CJS environment; map it to a manual mock that stubs the API surface
+  // used by the pure scheduling logic under test.
   moduleNameMapper: {
     '^@/(.*)$': path.resolve(__dirname, '$1'),
+    '^expo-notifications$': path.resolve(__dirname, '__mocks__/expo-notifications.ts'),
   },
 
   // Only run files that match the project's test naming convention.

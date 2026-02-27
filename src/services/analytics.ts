@@ -87,7 +87,13 @@ export type AnalyticsEvent =
   | {
       name: 'paywall_viewed';
       props: {
-        source: string;
+        trigger_source: string;
+      };
+    }
+  | {
+      name: 'purchase_completed';
+      props: {
+        product_id: string;
       };
     }
   | {
@@ -95,12 +101,6 @@ export type AnalyticsEvent =
       props: {
         product_id: string;
         period: string;
-      };
-    }
-  | {
-      name: 'app_lock_toggled';
-      props: {
-        enabled: boolean;
       };
     }
   | {

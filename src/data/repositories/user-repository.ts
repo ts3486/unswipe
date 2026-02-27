@@ -16,7 +16,6 @@ interface UserProfileRow {
   created_at: string;
   locale: string;
   notification_style: string;
-  lock_enabled: number;
   plan_selected: string | null;
   goal_type: string | null;
   spending_budget_weekly: number | null;
@@ -30,7 +29,6 @@ function rowToUserProfile(row: UserProfileRow): UserProfile {
     created_at: row.created_at,
     locale: row.locale,
     notification_style: row.notification_style as UserProfile['notification_style'],
-    lock_enabled: row.lock_enabled,
     plan_selected: row.plan_selected ?? '',
     goal_type: (row.goal_type ?? 'reduce_swipe') as UserProfile['goal_type'],
     spending_budget_weekly: row.spending_budget_weekly,
@@ -73,16 +71,15 @@ export async function createUserProfile(
 
   await db.runAsync(
     `INSERT INTO user_profile
-       (id, created_at, locale, notification_style, lock_enabled,
+       (id, created_at, locale, notification_style,
         plan_selected, goal_type, spending_budget_weekly,
         spending_budget_daily, spending_limit_mode)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     [
       id,
       created_at,
       profile.locale,
       profile.notification_style,
-      profile.lock_enabled,
       profile.plan_selected,
       profile.goal_type,
       profile.spending_budget_weekly ?? null,

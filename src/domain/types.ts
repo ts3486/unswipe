@@ -30,9 +30,16 @@ export type UrgeOutcome = 'success' | 'fail' | 'ongoing';
 
 export type SpendingLimitMode = 'soft' | 'pledge';
 
-export type SubscriptionStatus = 'active' | 'expired' | 'none';
+export type SubscriptionStatus = 'active' | 'expired' | 'none' | 'one_time';
 
-export type SubscriptionPeriod = 'monthly' | 'yearly';
+export type SubscriptionPeriod = 'monthly' | 'yearly' | 'one_time';
+
+export type PaywallTriggerSource =
+  | 'settings'
+  | 'panic_limit'
+  | 'learn_locked'
+  | 'progress_locked'
+  | 'onboarding';
 
 // ---------------------------------------------------------------------------
 // DB-backed entity interfaces
@@ -48,7 +55,6 @@ export interface UserProfile {
   created_at: string; // ISO-8601 UTC
   locale: string;
   notification_style: NotificationStyle;
-  lock_enabled: number; // 0 | 1 (SQLite boolean)
   plan_selected: string;
   goal_type: GoalType;
   spending_budget_weekly: number | null;
@@ -132,6 +138,7 @@ export interface ContentProgress {
 
 /**
  * Mirrors subscription_state table.
+ * is_premium is true for one-time purchases (status === 'one_time') or active subscriptions.
  */
 export interface SubscriptionState {
   id: string;
@@ -140,6 +147,7 @@ export interface SubscriptionState {
   period: SubscriptionPeriod;
   started_at: string; // ISO-8601 UTC
   expires_at: string; // ISO-8601 UTC
+  is_premium: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -221,6 +229,8 @@ export interface Catalog {
   spend_item_types: CatalogSpendItemType[];
   spend_delay_cards: CatalogSpendDelayCard[];
   copy: CatalogCopy;
+  /** Preset motivational messages for the daily motivation card. */
+  motivation_messages: string[];
 }
 
 // ---------------------------------------------------------------------------
