@@ -20,97 +20,103 @@
  * are deliberately absent from every props type.
  */
 export type AnalyticsEvent =
-  | {
-      name: 'onboarding_completed';
-      props: {
-        goal_type: string;
-        trigger_count: number;
-        has_budget: boolean;
-      };
-    }
-  | {
-      name: 'panic_started';
-      props: {
-        urge_kind: string;
-        from_screen: string;
-      };
-    }
-  | {
-      name: 'panic_protocol_completed';
-      props: {
-        urge_kind: string;
-        duration_ms: number;
-      };
-    }
-  | {
-      name: 'panic_action_selected';
-      props: {
-        urge_kind: string;
-        action_id: string;
-      };
-    }
-  | {
-      name: 'panic_outcome_logged';
-      props: {
-        urge_kind: string;
-        outcome: string;
-        trigger_tag: string | null;
-      };
-    }
-  | {
-      name: 'daily_checkin_completed';
-      props: {
-        mood: number;
-        fatigue: number;
-        urge: number;
-        /** Null when the user did not answer. */
-        opened_at_night: boolean | null;
-        /** Null when the user did not answer. */
-        spent_today: boolean | null;
-        // `note` and `spend_amount` are intentionally absent.
-      };
-    }
-  | {
-      name: 'content_viewed';
-      props: {
-        content_id: string;
-        day_index: number;
-      };
-    }
-  | {
-      name: 'content_completed';
-      props: {
-        content_id: string;
-        day_index: number;
-      };
-    }
-  | {
-      name: 'paywall_viewed';
-      props: {
-        source: string;
-      };
-    }
-  | {
-      name: 'subscription_started';
-      props: {
-        product_id: string;
-        period: string;
-      };
-    }
-  | {
-      name: 'app_lock_toggled';
-      props: {
-        enabled: boolean;
-      };
-    }
-  | {
-      name: 'data_exported';
-      props: Record<string, never>;
-    }
-  | {
-      name: 'data_deleted';
-      props: Record<string, never>;
-    };
+	| {
+			name: "onboarding_completed";
+			props: {
+				goal_type: string;
+				trigger_count: number;
+				has_budget: boolean;
+			};
+	  }
+	| {
+			name: "panic_started";
+			props: {
+				urge_kind: string;
+				from_screen: string;
+			};
+	  }
+	| {
+			name: "panic_protocol_completed";
+			props: {
+				urge_kind: string;
+				duration_ms: number;
+			};
+	  }
+	| {
+			name: "panic_action_selected";
+			props: {
+				urge_kind: string;
+				action_id: string;
+			};
+	  }
+	| {
+			name: "panic_outcome_logged";
+			props: {
+				urge_kind: string;
+				outcome: string;
+				trigger_tag: string | null;
+			};
+	  }
+	| {
+			name: "daily_checkin_completed";
+			props: {
+				mood: number;
+				fatigue: number;
+				urge: number;
+				/** Null when the user did not answer. */
+				opened_at_night: boolean | null;
+				/** Null when the user did not answer. */
+				spent_today: boolean | null;
+				// `note` and `spend_amount` are intentionally absent.
+			};
+	  }
+	| {
+			name: "content_viewed";
+			props: {
+				content_id: string;
+				day_index: number;
+			};
+	  }
+	| {
+			name: "content_completed";
+			props: {
+				content_id: string;
+				day_index: number;
+			};
+	  }
+	| {
+			name: "paywall_viewed";
+			props: {
+				source: string;
+			};
+	  }
+	| {
+			name: "subscription_started";
+			props: {
+				product_id: string;
+				period: string;
+			};
+	  }
+	| {
+			name: "app_lock_toggled";
+			props: {
+				enabled: boolean;
+			};
+	  }
+	| {
+			name: "notification_opened";
+			props: {
+				type: string;
+			};
+	  }
+	| {
+			name: "data_exported";
+			props: Record<string, never>;
+	  }
+	| {
+			name: "data_deleted";
+			props: Record<string, never>;
+	  };
 
 // ---------------------------------------------------------------------------
 // Adapter interface
@@ -122,8 +128,8 @@ export type AnalyticsEvent =
  * is identified (post-onboarding).
  */
 export interface AnalyticsAdapter {
-  track(event: AnalyticsEvent): void;
-  setUserId(id: string): void;
+	track(event: AnalyticsEvent): void;
+	setUserId(id: string): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,13 +141,13 @@ export interface AnalyticsAdapter {
  * Used in development and as a safe fallback when no backend is configured.
  */
 export class NoopAnalyticsAdapter implements AnalyticsAdapter {
-  track(_event: AnalyticsEvent): void {
-    // Intentionally empty — no data leaves the device.
-  }
+	track(_event: AnalyticsEvent): void {
+		// Intentionally empty — no data leaves the device.
+	}
 
-  setUserId(_id: string): void {
-    // Intentionally empty.
-  }
+	setUserId(_id: string): void {
+		// Intentionally empty.
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +164,6 @@ export class NoopAnalyticsAdapter implements AnalyticsAdapter {
  * @returns An AnalyticsAdapter instance ready to use.
  */
 export function createAnalytics(): AnalyticsAdapter {
-  // TODO(firebase): swap for FirebaseAnalyticsAdapter when available.
-  return new NoopAnalyticsAdapter();
+	// TODO(firebase): swap for FirebaseAnalyticsAdapter when available.
+	return new NoopAnalyticsAdapter();
 }
