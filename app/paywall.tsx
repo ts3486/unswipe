@@ -1,218 +1,272 @@
-// Paywall screen.
-// Shows premium features and subscription options.
+// Paywall screen — one-time purchase redesign.
+// Shows emotional hook, social proof, value props, price block, and CTA.
 // TypeScript strict mode.
 
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
-import { Button, Card, Chip, Divider, Text } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useAnalytics } from '@/src/contexts/AnalyticsContext';
-import { colors } from '@/src/constants/theme';
-import type { SubscriptionPeriod } from '@/src/domain/types';
+import { colors } from "@/src/constants/theme";
+import { useAnalytics } from "@/src/contexts/AnalyticsContext";
+import { useAppState } from "@/src/contexts/AppStateContext";
+import type { PaywallTriggerSource } from "@/src/domain/types";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { Button, Card, Divider, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
 
-interface PremiumFeature {
-  icon: string;
-  title: string;
-  description: string;
+interface ValueProp {
+	icon: string;
+	title: string;
+	description: string;
 }
 
-const PREMIUM_FEATURES: PremiumFeature[] = [
-  {
-    icon: 'chart-line',
-    title: 'Detailed analytics',
-    description: 'Weekly and monthly trend charts, pattern insights.',
-  },
-  {
-    icon: 'calendar-check',
-    title: 'Extended courses',
-    description: 'Beyond the 7-day starter: 30-day and custom tracks.',
-  },
-  {
-    icon: 'bell-badge',
-    title: 'Smart reminders',
-    description: 'Contextual nudges based on your urge patterns.',
-  },
-  {
-    icon: 'export-variant',
-    title: 'Data export',
-    description: 'Save and share your progress as a PDF or CSV file.',
-  },
+const VALUE_PROPS: ValueProp[] = [
+	{
+		icon: "timer-outline",
+		title: "60-second panic reset",
+		description:
+			"A fast, structured protocol to interrupt urges before they take over.",
+	},
+	{
+		icon: "shield-check-outline",
+		title: "Spend delay cards",
+		description:
+			"Pause before in-app purchases with friction cards that buy you time.",
+	},
+	{
+		icon: "chart-bar",
+		title: "Track your progress",
+		description:
+			"See streaks, resist rank, and patterns that show how far you've come.",
+	},
 ];
+
+const TRIGGER_MESSAGES: Record<
+	PaywallTriggerSource,
+	{ headline: string; subtext: string }
+> = {
+	settings: {
+		headline: "You've already taken the first step",
+		subtext: "Unlock everything Unmatch has to offer with a single purchase.",
+	},
+	panic_limit: {
+		headline: "You're building real momentum",
+		subtext: "Unlock the full panic reset toolkit to keep that momentum going.",
+	},
+	learn_locked: {
+		headline: "Ready to go deeper?",
+		subtext: "Unlock the full course library to build lasting habits.",
+	},
+	progress_locked: {
+		headline: "Your progress is real",
+		subtext:
+			"Unlock detailed insights to see exactly how much ground you've covered.",
+	},
+	onboarding: {
+		headline: "You've already taken the first step",
+		subtext:
+			"Join thousands of people taking back their time — one resist at a time.",
+	},
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function PaywallScreen(): React.ReactElement {
-  const analytics = useAnalytics();
-  const [period, setPeriod] = useState<SubscriptionPeriod>('yearly');
-  const [isSubscribing, setIsSubscribing] = useState<boolean>(false);
-  const [subscribeMessage, setSubscribeMessage] = useState<string | null>(null);
+	const analytics = useAnalytics();
+	const { unlockPremium } = useAppState();
+	const params = useLocalSearchParams<{ trigger_source?: string }>();
 
-  // Fire paywall_viewed on mount.
-  useEffect(() => {
-    analytics.track({
-      name: 'paywall_viewed',
-      props: { source: 'settings' },
-    });
-  }, [analytics]);
+	const triggerSource: PaywallTriggerSource =
+		(params.trigger_source as PaywallTriggerSource | undefined) ?? "settings";
 
-  const handleSubscribe = useCallback((): void => {
-    setIsSubscribing(true);
-    // Stub: in a real implementation this would call RevenueCat or StoreKit.
-    setTimeout(() => {
-      setIsSubscribing(false);
-      setSubscribeMessage('Subscription purchases are not available yet in this version.');
-    }, 800);
-  }, []);
+	const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
+	const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  const handleRestore = useCallback((): void => {
-    setSubscribeMessage('Restore purchases is not available yet in this version.');
-  }, []);
+	const copy = TRIGGER_MESSAGES[triggerSource] ?? TRIGGER_MESSAGES.settings;
 
-  const monthlyPrice = '$4.99 / month';
-  const yearlyPrice = '$29.99 / year';
-  const yearlySavings = 'Save 50%';
+	// Fire paywall_viewed on mount.
+	useEffect(() => {
+		analytics.track({
+			name: "paywall_viewed",
+			props: { trigger_source: triggerSource },
+		});
+	}, [analytics, triggerSource]);
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+	const handlePurchase = useCallback((): void => {
+		setIsPurchasing(true);
+		setFeedbackMessage(null);
+		// Stub: in production this calls StoreKit / RevenueCat.
+		// On success, call unlockPremium() and navigate back.
+		setTimeout(async () => {
+			try {
+				await unlockPremium("unmatch_one_time_699");
+				analytics.track({
+					name: "purchase_completed",
+					props: { product_id: "unmatch_one_time_699" },
+				});
+				router.back();
+			} catch {
+				setFeedbackMessage(
+					"Purchase could not be completed. Please try again.",
+				);
+			} finally {
+				setIsPurchasing(false);
+			}
+		}, 800);
+	}, [unlockPremium, analytics]);
 
-  return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Go premium
-        </Text>
-        <Text variant="bodyLarge" style={styles.subtitle}>
-          Unlock all features and support independent development.
-        </Text>
-      </View>
+	const handleRestore = useCallback((): void => {
+		setFeedbackMessage(
+			"Restore purchases is not available yet in this version.",
+		);
+	}, []);
 
-      {/* Features list */}
-      <Card style={styles.featuresCard} mode="contained">
-        <Card.Content style={styles.featuresContent}>
-          {PREMIUM_FEATURES.map((feat, idx) => (
-            <React.Fragment key={feat.title}>
-              <View style={styles.featureRow}>
-                <View style={styles.featureIcon}>
-                  <MaterialCommunityIcons
-                    name={feat.icon as never}
-                    size={22}
-                    color={colors.primary}
-                  />
-                </View>
-                <View style={styles.featureText}>
-                  <Text variant="titleSmall" style={styles.featureTitle}>
-                    {feat.title}
-                  </Text>
-                  <Text variant="bodySmall" style={styles.featureDesc}>
-                    {feat.description}
-                  </Text>
-                </View>
-              </View>
-              {idx < PREMIUM_FEATURES.length - 1 && (
-                <Divider style={styles.featureDivider} />
-              )}
-            </React.Fragment>
-          ))}
-        </Card.Content>
-      </Card>
+	// ---------------------------------------------------------------------------
+	// Render
+	// ---------------------------------------------------------------------------
 
-      {/* Period toggle */}
-      <View style={styles.periodRow}>
-        <Chip
-          selected={period === 'monthly'}
-          onPress={() => { setPeriod('monthly'); }}
-          style={[styles.periodChip, period === 'monthly' && styles.periodChipSelected]}
-          textStyle={period === 'monthly' ? styles.periodChipTextSelected : styles.periodChipText}
-        >
-          Monthly
-        </Chip>
-        <Chip
-          selected={period === 'yearly'}
-          onPress={() => { setPeriod('yearly'); }}
-          style={[styles.periodChip, period === 'yearly' && styles.periodChipSelected]}
-          textStyle={period === 'yearly' ? styles.periodChipTextSelected : styles.periodChipText}
-        >
-          Yearly
-        </Chip>
-        {period === 'yearly' && (
-          <View style={styles.savingsBadge}>
-            <Text style={styles.savingsText}>{yearlySavings}</Text>
-          </View>
-        )}
-      </View>
+	return (
+		<ScrollView
+			style={styles.root}
+			contentContainerStyle={styles.content}
+			showsVerticalScrollIndicator={false}
+		>
+			{/* Emotional hook */}
+			<View style={styles.header}>
+				<Text variant="headlineMedium" style={styles.headline}>
+					{copy.headline}
+				</Text>
+				<Text variant="bodyLarge" style={styles.subtext}>
+					{copy.subtext}
+				</Text>
+			</View>
 
-      {/* Price display */}
-      <Card style={styles.priceCard} mode="contained">
-        <Card.Content style={styles.priceContent}>
-          <Text variant="displaySmall" style={styles.priceAmount}>
-            {period === 'monthly' ? monthlyPrice : yearlyPrice}
-          </Text>
-          {period === 'yearly' && (
-            <Text variant="bodySmall" style={styles.priceNote}>
-              Billed once per year. Cancel any time.
-            </Text>
-          )}
-        </Card.Content>
-      </Card>
+			{/* Social proof bar */}
+			<View style={styles.socialProofBar}>
+				<MaterialCommunityIcons
+					name="account-group-outline"
+					size={18}
+					color={colors.secondary}
+				/>
+				<Text variant="bodySmall" style={styles.socialProofText}>
+					Join 4,000+ people taking back their time
+				</Text>
+			</View>
 
-      {/* Subscribe button */}
-      <Button
-        mode="contained"
-        onPress={handleSubscribe}
-        loading={isSubscribing}
-        disabled={isSubscribing}
-        style={styles.subscribeButton}
-        contentStyle={styles.subscribeButtonContent}
-        labelStyle={styles.subscribeButtonLabel}
-      >
-        Subscribe
-      </Button>
+			{/* Value props */}
+			<Card style={styles.valueCard} mode="contained">
+				<Card.Content style={styles.valueCardContent}>
+					{VALUE_PROPS.map((prop, idx) => (
+						<React.Fragment key={prop.title}>
+							<View style={styles.valueRow}>
+								<View style={styles.valueIconWrap}>
+									<MaterialCommunityIcons
+										name={prop.icon as never}
+										size={22}
+										color={colors.primary}
+									/>
+								</View>
+								<View style={styles.valueText}>
+									<Text variant="titleSmall" style={styles.valueTitle}>
+										{prop.title}
+									</Text>
+									<Text variant="bodySmall" style={styles.valueDesc}>
+										{prop.description}
+									</Text>
+								</View>
+							</View>
+							{idx < VALUE_PROPS.length - 1 && (
+								<Divider style={styles.valueDivider} />
+							)}
+						</React.Fragment>
+					))}
+				</Card.Content>
+			</Card>
 
-      {/* Restore link */}
-      <Button
-        mode="text"
-        onPress={handleRestore}
-        textColor={colors.muted}
-        style={styles.restoreButton}
-      >
-        Restore purchases
-      </Button>
+			{/* Price block */}
+			<Card style={styles.priceCard} mode="contained">
+				<Card.Content style={styles.priceCardContent}>
+					<Text variant="displaySmall" style={styles.priceAmount}>
+						$6.99
+					</Text>
+					<Text variant="titleSmall" style={styles.priceLabel}>
+						One-time purchase. No subscription. No account.
+					</Text>
+					<Text variant="bodySmall" style={styles.priceComparison}>
+						Less than one Tinder boost.
+					</Text>
+				</Card.Content>
+			</Card>
 
-      {/* Feedback message */}
-      {subscribeMessage !== null && (
-        <View style={styles.messageBox}>
-          <Text variant="bodySmall" style={styles.messageText}>
-            {subscribeMessage}
-          </Text>
-        </View>
-      )}
+			{/* CTA */}
+			<Button
+				mode="contained"
+				onPress={handlePurchase}
+				loading={isPurchasing}
+				disabled={isPurchasing}
+				style={styles.ctaButton}
+				contentStyle={styles.ctaButtonContent}
+				labelStyle={styles.ctaButtonLabel}
+				accessibilityLabel="Unlock Unmatch — one-time purchase for $6.99"
+				accessibilityRole="button"
+				accessibilityState={{ disabled: isPurchasing, busy: isPurchasing }}
+			>
+				Unlock Unmatch
+			</Button>
 
-      <Divider style={styles.footerDivider} />
-      <Text variant="bodySmall" style={styles.footerText}>
-        Subscriptions are managed by the {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}. No data is shared with payment processors.
-      </Text>
+			{/* Trust signals */}
+			<View style={styles.trustRow}>
+				<View style={styles.trustItem}>
+					<MaterialCommunityIcons
+						name="lock-outline"
+						size={14}
+						color={colors.muted}
+					/>
+					<Text variant="bodySmall" style={styles.trustText}>
+						All data stays on your device
+					</Text>
+				</View>
+				<View style={styles.trustItem}>
+					<MaterialCommunityIcons
+						name="account-off-outline"
+						size={14}
+						color={colors.muted}
+					/>
+					<Text variant="bodySmall" style={styles.trustText}>
+						No account required
+					</Text>
+				</View>
+			</View>
 
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
-  );
+			{/* Restore link */}
+			<Button
+				mode="text"
+				onPress={handleRestore}
+				textColor={colors.muted}
+				style={styles.restoreButton}
+				labelStyle={styles.restoreLabel}
+				accessibilityLabel="Restore previous purchase"
+				accessibilityRole="button"
+			>
+				Restore purchase
+			</Button>
+
+			{/* Feedback message */}
+			{feedbackMessage !== null && (
+				<View style={styles.feedbackBox}>
+					<Text variant="bodySmall" style={styles.feedbackText}>
+						{feedbackMessage}
+					</Text>
+				</View>
+			)}
+
+			<View style={styles.bottomSpacer} />
+		</ScrollView>
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -220,162 +274,172 @@ export default function PaywallScreen(): React.ReactElement {
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  header: {
-    alignItems: 'center',
-    gap: 8,
-    paddingBottom: 8,
-  },
-  title: {
-    color: colors.text,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: colors.muted,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  featuresCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  featuresContent: {
-    paddingVertical: 4,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    paddingVertical: 12,
-  },
-  featureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#0F1D3A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  featureText: {
-    flex: 1,
-    gap: 2,
-  },
-  featureTitle: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  featureDesc: {
-    color: colors.muted,
-    lineHeight: 18,
-  },
-  featureDivider: {
-    backgroundColor: colors.border,
-    marginLeft: 50,
-  },
-  periodRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  periodChip: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-  },
-  periodChipSelected: {
-    backgroundColor: '#0F1D3A',
-    borderColor: colors.primary,
-  },
-  periodChipText: {
-    color: colors.muted,
-  },
-  periodChipTextSelected: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  savingsBadge: {
-    backgroundColor: '#1A3D2E',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.success,
-  },
-  savingsText: {
-    color: colors.success,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  priceCard: {
-    backgroundColor: '#0F1D3A',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  priceContent: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 4,
-  },
-  priceAmount: {
-    color: colors.text,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  priceNote: {
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  subscribeButton: {
-    borderRadius: 14,
-  },
-  subscribeButtonContent: {
-    paddingVertical: 8,
-  },
-  subscribeButtonLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  restoreButton: {
-    marginTop: -4,
-  },
-  messageBox: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  messageText: {
-    color: colors.muted,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  footerDivider: {
-    backgroundColor: colors.border,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  footerText: {
-    color: colors.muted,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  bottomSpacer: {
-    height: 24,
-  },
+	root: {
+		flex: 1,
+		backgroundColor: colors.background,
+	},
+	content: {
+		paddingHorizontal: 20,
+		paddingTop: 48,
+		paddingBottom: 40,
+		gap: 18,
+	},
+	// Header
+	header: {
+		alignItems: "center",
+		gap: 10,
+		paddingBottom: 4,
+	},
+	headline: {
+		color: colors.text,
+		fontWeight: "700",
+		textAlign: "center",
+		lineHeight: 32,
+	},
+	subtext: {
+		color: colors.muted,
+		textAlign: "center",
+		lineHeight: 26,
+	},
+	// Social proof
+	socialProofBar: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 6,
+		backgroundColor: colors.surface,
+		borderRadius: 10,
+		paddingVertical: 10,
+		paddingHorizontal: 16,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	socialProofText: {
+		color: colors.secondary,
+		fontWeight: "600",
+	},
+	// Value props card
+	valueCard: {
+		backgroundColor: colors.surface,
+		borderRadius: 14,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	valueCardContent: {
+		paddingVertical: 4,
+	},
+	valueRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: 14,
+		paddingVertical: 14,
+	},
+	valueIconWrap: {
+		width: 38,
+		height: 38,
+		borderRadius: 10,
+		backgroundColor: "#0F1D3A",
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	},
+	valueText: {
+		flex: 1,
+		gap: 3,
+	},
+	valueTitle: {
+		color: colors.text,
+		fontWeight: "600",
+	},
+	valueDesc: {
+		color: colors.muted,
+		lineHeight: 18,
+	},
+	valueDivider: {
+		backgroundColor: colors.border,
+		marginLeft: 52,
+	},
+	// Price block
+	priceCard: {
+		backgroundColor: "#0F1D3A",
+		borderRadius: 14,
+		borderWidth: 1,
+		borderColor: colors.primary,
+	},
+	priceCardContent: {
+		alignItems: "center",
+		paddingVertical: 12,
+		gap: 4,
+	},
+	priceAmount: {
+		color: colors.text,
+		fontWeight: "700",
+		textAlign: "center",
+		letterSpacing: -0.5,
+	},
+	priceLabel: {
+		color: colors.muted,
+		textAlign: "center",
+		fontWeight: "400",
+	},
+	priceComparison: {
+		color: colors.warning,
+		textAlign: "center",
+		fontWeight: "500",
+		marginTop: 2,
+	},
+	// CTA button
+	ctaButton: {
+		borderRadius: 14,
+		backgroundColor: colors.primary,
+	},
+	ctaButtonContent: {
+		paddingVertical: 10,
+	},
+	ctaButtonLabel: {
+		fontSize: 17,
+		fontWeight: "700",
+		letterSpacing: 0.3,
+		color: "#FFFFFF",
+	},
+	// Trust signals
+	trustRow: {
+		flexDirection: "row",
+		justifyContent: "center",
+		gap: 20,
+		flexWrap: "wrap",
+	},
+	trustItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 5,
+	},
+	trustText: {
+		color: colors.muted,
+	},
+	// Restore
+	restoreButton: {
+		alignSelf: "center",
+		marginTop: -6,
+	},
+	restoreLabel: {
+		fontSize: 13,
+		textDecorationLine: "underline",
+	},
+	// Feedback
+	feedbackBox: {
+		backgroundColor: colors.surface,
+		borderRadius: 10,
+		padding: 12,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	feedbackText: {
+		color: colors.muted,
+		textAlign: "center",
+		lineHeight: 18,
+	},
+	bottomSpacer: {
+		height: 16,
+	},
 });

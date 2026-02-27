@@ -64,7 +64,7 @@ This targets both in-app purchases (boosts, premium, like packs) and real-world 
 The app does not loudly announce "dating addiction." It uses neutral language — urges, reset, boundaries, self-care. The icon, notifications, and UI are all designed to be unremarkable on a home screen. Notification style is configurable (normal, stealth, or off).
 
 ### Private
-All data stays on-device in V1. No backend, no cloud sync, no accounts. Spend amounts and personal notes are never sent anywhere, not even to analytics. Users can export or delete all their data at any time. Optional app lock via biometrics or PIN.
+All data stays on-device in V1. No backend, no cloud sync, no accounts. Spend amounts and personal notes are never sent anywhere, not even to analytics. Users can export or delete all their data at any time.
 
 ### Offline-first
 The reset flow works without an internet connection. The entire app works offline. No loading spinners, no server dependencies.
@@ -87,8 +87,6 @@ Triggers, coping actions, spend categories, and course content are all preset �
 | Storage | expo-sqlite (local only) |
 | Date/time | date-fns + date-fns-tz |
 | Notifications | expo-notifications (local) |
-| Auth | expo-local-authentication (biometric + PIN) |
-
 Architecture follows a clean layered pattern: domain rules (pure functions) → data layer (repositories over SQLite) → contexts (state providers) → hooks (feature logic) → screens (thin UI). All domain logic is tested. No SQL in screens.
 
 ## What's built (V1)
@@ -98,7 +96,7 @@ Architecture follows a clean layered pattern: domain rules (pure functions) → 
 - Panic tab (6-step reset protocol with breathing, action selection, outcome logging)
 - Progress tab (calendar, weekly stats, streak tracking)
 - Learn tab (7-day starter course with day-locked progression)
-- Settings tab (app lock, notification style, privacy controls)
+- Settings tab (notification style, privacy controls)
 - Daily check-in (mood/fatigue/urge scales, optional night-open and spend flags)
 - Paywall scaffold (subscription model ready for RevenueCat integration)
 - Analytics framework (typed events, no-op adapter, privacy enforced at the type level)

@@ -14,7 +14,12 @@ export {
   countSuccessesByDate,
   countSpendAvoidedByDate,
   getUrgeEventsInRange,
+  getUrgeCountByDayOfWeek,
+  getUrgeCountByTimeOfDay,
+  getSuccessCountInRange,
+  countCompletedPanicSessions,
 } from './urge-repository';
+export type { DayOfWeekCount, TimeOfDayCount } from './urge-repository';
 
 export {
   createCheckin,

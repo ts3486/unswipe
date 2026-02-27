@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS user_profile (
   created_at TEXT NOT NULL,
   locale TEXT NOT NULL DEFAULT 'en',
   notification_style TEXT NOT NULL DEFAULT 'normal',
-  lock_enabled INTEGER NOT NULL DEFAULT 0,
   plan_selected TEXT,
   goal_type TEXT,
   spending_budget_weekly INTEGER,
@@ -89,8 +88,14 @@ CREATE TABLE IF NOT EXISTS subscription_state (
   product_id TEXT,
   period TEXT,
   started_at TEXT,
-  expires_at TEXT
+  expires_at TEXT,
+  is_premium INTEGER NOT NULL DEFAULT 0
 );
+`.trim();
+
+// Migration: add is_premium column to existing subscription_state tables.
+const MIGRATE_SUBSCRIPTION_IS_PREMIUM = `
+ALTER TABLE subscription_state ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0;
 `.trim();
 
 /**
@@ -114,6 +119,15 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     ${CREATE_CONTENT_PROGRESS}
     ${CREATE_SUBSCRIPTION_STATE}
   `);
+
+  // Run additive migrations that are safe to run multiple times.
+  // ALTER TABLE ... ADD COLUMN fails silently if column already exists on older SQLite,
+  // but expo-sqlite wraps errors — so we catch and ignore duplicate column errors.
+  try {
+    await db.execAsync(MIGRATE_SUBSCRIPTION_IS_PREMIUM);
+  } catch {
+    // Column already exists — safe to ignore.
+  }
 
   _db = db;
   return db;

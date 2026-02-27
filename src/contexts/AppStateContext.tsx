@@ -20,9 +20,13 @@ import {
   createUserProfile,
   getAllProgressDates,
   countSuccessesByDate,
+  countCompletedPanicSessions,
   getLatestProgress,
   getUserProfile,
 } from '@/src/data/repositories';
+import { getIsPremium, recordOneTimePurchase } from '@/src/data/repositories/subscription-repository';
+
+const FREE_PANIC_USES = 1;
 import { getLocalDateString } from '@/src/utils/date';
 import { useDatabaseContext } from './DatabaseContext';
 
@@ -39,14 +43,19 @@ interface AppState {
   todaySuccess: boolean;
   isOnboarded: boolean;
   isLoading: boolean;
+  isPremium: boolean;
+  /** Number of free panic resets still available (0 once all free uses exhausted). */
+  panicFreeUsesRemaining: number;
 }
 
 interface AppStateActions {
   refreshProgress: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshPremiumStatus: () => Promise<void>;
   completeOnboarding: (
     profile: Omit<UserProfile, 'id' | 'created_at'>,
   ) => Promise<void>;
+  unlockPremium: (productId: string) => Promise<void>;
 }
 
 type AppStateContextValue = AppState & AppStateActions;
@@ -75,6 +84,8 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   const [resistCount, setResistCount] = useState<number>(0);
   const [todaySuccess, setTodaySuccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [panicFreeUsesRemaining, setPanicFreeUsesRemaining] = useState<number>(FREE_PANIC_USES);
 
   // ---------------------------------------------------------------------------
   // Data loaders
@@ -83,6 +94,22 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   const refreshProfile = useCallback(async (): Promise<void> => {
     const profile = await getUserProfile(db);
     setUserProfile(profile);
+  }, [db]);
+
+  const refreshPremium = useCallback(async (): Promise<void> => {
+    const premium = await getIsPremium(db);
+    setIsPremium(premium);
+
+    // Compute free uses remaining based on completed panic sessions.
+    // Once premium, always unlimited.
+    if (!premium) {
+      const completedSessions = await countCompletedPanicSessions(db);
+      const remaining = Math.max(0, FREE_PANIC_USES - completedSessions);
+      setPanicFreeUsesRemaining(remaining);
+    } else {
+      // Premium users have unlimited uses; represent as a large number.
+      setPanicFreeUsesRemaining(FREE_PANIC_USES);
+    }
   }, [db]);
 
   const refreshProgress = useCallback(async (): Promise<void> => {
@@ -126,6 +153,14 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     [db, refreshProfile],
   );
 
+  const unlockPremium = useCallback(
+    async (productId: string): Promise<void> => {
+      await recordOneTimePurchase(db, productId);
+      await refreshPremium();
+    },
+    [db, refreshPremium],
+  );
+
   // ---------------------------------------------------------------------------
   // Initial load
   // ---------------------------------------------------------------------------
@@ -134,7 +169,7 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     let cancelled = false;
 
     async function load(): Promise<void> {
-      await Promise.all([refreshProfile(), refreshProgress()]);
+      await Promise.all([refreshProfile(), refreshProgress(), refreshPremium()]);
       if (!cancelled) {
         setIsLoading(false);
       }
@@ -145,7 +180,7 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     return () => {
       cancelled = true;
     };
-  }, [refreshProfile, refreshProgress]);
+  }, [refreshProfile, refreshProgress, refreshPremium]);
 
   // ---------------------------------------------------------------------------
   // Context value
@@ -160,9 +195,13 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     todaySuccess,
     isOnboarded: userProfile !== null,
     isLoading,
+    isPremium,
+    panicFreeUsesRemaining,
     refreshProgress,
     refreshProfile,
+    refreshPremiumStatus: refreshPremium,
     completeOnboarding,
+    unlockPremium,
   };
 
   return (

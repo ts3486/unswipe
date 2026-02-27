@@ -17,7 +17,6 @@ Status snapshot as of 2026-02-23. Covers every gap between the current codebase 
 | Panic flow state machine | Done |
 | Analytics types + privacy | Done (stub adapter) |
 | EAS build/submit scripts | Done |
-| App lock / biometric | Stub only |
 | Push notifications | Plugin configured, no logic |
 | In-app purchases / paywall | Screen exists, no SKU logic |
 | Crash reporting | Missing |
@@ -109,13 +108,7 @@ Features that are either missing or stub-only. Not all are hard blockers for rev
 - [ ] Handle `off` mode (no notifications scheduled)
 - [ ] Test notification behavior when app is backgrounded / killed
 
-### 2.3 App Lock (Biometric)
-- [ ] Implement lock screen using `expo-local-authentication`
-- [ ] Show lock on app foreground if `lock_enabled` is true in user profile
-- [ ] Provide PIN fallback if biometric is unavailable
-- [ ] Test on devices with Face ID, Touch ID, and Android fingerprint
-
-### 2.4 Crash Reporting
+### 2.3 Crash Reporting
 - [ ] Add **Sentry** (`@sentry/react-native` + `sentry-expo`) or equivalent
 - [ ] Configure source maps upload in EAS build
 - [ ] Add global **ErrorBoundary** component wrapping the root layout
@@ -186,7 +179,6 @@ Features that are either missing or stub-only. Not all are hard blockers for rev
 - [ ] Full manual QA pass on production build:
   - Onboarding → Home → Panic flow → Check-in → Progress → Learn → Settings
   - Data export and delete
-  - App lock toggle
   - Notification toggle
 
 ### 4.2 App Store Submission (iOS)

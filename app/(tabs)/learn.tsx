@@ -17,13 +17,14 @@ import { useContent } from '@/src/hooks/useContent';
 import { useAnalytics } from '@/src/contexts/AnalyticsContext';
 import { colors } from '@/src/constants/theme';
 import type { Content } from '@/src/domain/types';
+import { router } from 'expo-router';
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function LearnScreen(): React.ReactElement {
-  const { userProfile } = useAppState();
+  const { userProfile, isPremium } = useAppState();
   const analytics = useAnalytics();
   const {
     allContent,
@@ -37,6 +38,12 @@ export default function LearnScreen(): React.ReactElement {
   const [markingId, setMarkingId] = useState<string | null>(null);
 
   const handleCardPress = useCallback((content: Content): void => {
+    // Day 2+ requires premium.
+    if (content.day_index > 1 && !isPremium) {
+      router.push({ pathname: '/paywall', params: { trigger_source: 'learn_locked' } });
+      return;
+    }
+
     const wasExpanded = expandedId === content.content_id;
     setExpandedId(wasExpanded ? null : content.content_id);
 
@@ -49,7 +56,7 @@ export default function LearnScreen(): React.ReactElement {
         },
       });
     }
-  }, [expandedId, analytics]);
+  }, [expandedId, analytics, isPremium]);
 
   const handleMarkComplete = useCallback(async (contentId: string): Promise<void> => {
     if (markingId !== null) {
@@ -93,7 +100,9 @@ export default function LearnScreen(): React.ReactElement {
           const isCompleted = completedIds.has(item.content_id);
           const isCurrent = item.day_index === currentDayIndex;
           const isExpanded = expandedId === item.content_id;
-          const isLocked = item.day_index > currentDayIndex;
+          // Day 2+ is locked for free users; premium users follow normal progression lock.
+          const isPaywallLocked = item.day_index > 1 && !isPremium;
+          const isLocked = isPaywallLocked || item.day_index > currentDayIndex;
 
           return (
             <ContentCard

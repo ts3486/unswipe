@@ -121,7 +121,7 @@ describe('NoopAnalyticsAdapter', () => {
   it('track() does not throw for paywall_viewed', () => {
     const event: AnalyticsEvent = {
       name: 'paywall_viewed',
-      props: { source: 'settings' },
+      props: { trigger_source: 'settings' },
     };
     expect(() => adapter.track(event)).not.toThrow();
   });
@@ -130,14 +130,6 @@ describe('NoopAnalyticsAdapter', () => {
     const event: AnalyticsEvent = {
       name: 'subscription_started',
       props: { product_id: 'premium_monthly', period: 'monthly' },
-    };
-    expect(() => adapter.track(event)).not.toThrow();
-  });
-
-  it('track() does not throw for app_lock_toggled', () => {
-    const event: AnalyticsEvent = {
-      name: 'app_lock_toggled',
-      props: { enabled: true },
     };
     expect(() => adapter.track(event)).not.toThrow();
   });
@@ -197,8 +189,8 @@ describe('createAnalytics()', () => {
   it('returned adapter does not throw on track()', () => {
     const analytics = createAnalytics();
     const event: AnalyticsEvent = {
-      name: 'app_lock_toggled',
-      props: { enabled: false },
+      name: 'data_exported',
+      props: {},
     };
     expect(() => analytics.track(event)).not.toThrow();
   });

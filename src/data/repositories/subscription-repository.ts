@@ -23,16 +23,19 @@ interface SubscriptionStateRow {
   period: string | null;
   started_at: string | null;
   expires_at: string | null;
+  is_premium: number | null; // stored as 0 | 1 in SQLite
 }
 
 function rowToSubscriptionState(row: SubscriptionStateRow): SubscriptionState {
+  const status = row.status as SubscriptionState['status'];
   return {
     id: row.id,
-    status: row.status as SubscriptionState['status'],
+    status,
     product_id: row.product_id ?? '',
-    period: (row.period ?? 'monthly') as SubscriptionState['period'],
+    period: (row.period ?? 'one_time') as SubscriptionState['period'],
     started_at: row.started_at ?? '',
     expires_at: row.expires_at ?? '',
+    is_premium: row.is_premium === 1 || status === 'active' || status === 'one_time',
   };
 }
 
@@ -64,8 +67,8 @@ export async function upsertSubscription(
 ): Promise<void> {
   await db.runAsync(
     `INSERT OR REPLACE INTO subscription_state
-       (id, status, product_id, period, started_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?);`,
+       (id, status, product_id, period, started_at, expires_at, is_premium)
+     VALUES (?, ?, ?, ?, ?, ?, ?);`,
     [
       SINGLETON_ID,
       state.status,
@@ -73,6 +76,33 @@ export async function upsertSubscription(
       state.period,
       state.started_at,
       state.expires_at,
+      state.is_premium ? 1 : 0,
     ],
   );
+}
+
+/**
+ * Records a one-time purchase, setting is_premium = true and status = 'one_time'.
+ */
+export async function recordOneTimePurchase(
+  db: SQLiteDatabase,
+  productId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await upsertSubscription(db, {
+    status: 'one_time',
+    product_id: productId,
+    period: 'one_time',
+    started_at: now,
+    expires_at: '',
+    is_premium: true,
+  });
+}
+
+/**
+ * Returns true if the user has premium access (one-time purchase or active subscription).
+ */
+export async function getIsPremium(db: SQLiteDatabase): Promise<boolean> {
+  const state = await getSubscription(db);
+  return state?.is_premium ?? false;
 }
