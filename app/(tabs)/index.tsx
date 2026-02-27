@@ -5,21 +5,14 @@
 import { CheckinOverlay } from "@/src/components/CheckinOverlay";
 import { InlineCheckin } from "@/src/components/InlineCheckin";
 import { Logo } from "@/src/components/Logo";
-import {
-	MotivationCard,
-	getDailyMessage,
-} from "@/src/components/MotivationCard";
 import { PrivacyBadge } from "@/src/components/PrivacyBadge";
 import { ResistRank } from "@/src/components/ResistRank";
 import { ResistRankCompact } from "@/src/components/ResistRankCompact";
-import { TimeSavedCard } from "@/src/components/TimeSavedCard";
 import { colors } from "@/src/constants/theme";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { getCatalog } from "@/src/data/seed-loader";
 import { useCheckin } from "@/src/hooks/useCheckin";
 import { useContent } from "@/src/hooks/useContent";
-import { useWeeklySuccessCount } from "@/src/hooks/useWeeklySuccessCount";
-import { getLocalDateString } from "@/src/utils/date";
 import { router } from "expo-router";
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -48,7 +41,6 @@ export default function HomeScreen(): React.ReactElement {
 	} = useContent(userProfile?.created_at ?? null);
 
 	const checkin = useCheckin();
-	const { weeklySuccessCount } = useWeeklySuccessCount();
 	const [checkinOverlayVisible, setCheckinOverlayVisible] = useState(false);
 
 	const catalog = getCatalog();
@@ -57,13 +49,6 @@ export default function HomeScreen(): React.ReactElement {
 	// Today's content card (day_index matches current day in the course).
 	const todayContent =
 		allContent.find((c) => c.day_index === currentDayIndex) ?? null;
-
-	// Daily motivation message — deterministic per day.
-	const todayLocal = getLocalDateString();
-	const motivationMessage = getDailyMessage(
-		catalog.motivation_messages,
-		todayLocal,
-	);
 
 	const handleResetPress = useCallback((): void => {
 		router.push("/(tabs)/panic");
@@ -75,10 +60,6 @@ export default function HomeScreen(): React.ReactElement {
 
 	const handleCheckinClose = useCallback((): void => {
 		setCheckinOverlayVisible(false);
-	}, []);
-
-	const handleMotivationPress = useCallback((): void => {
-		router.push("/(tabs)/learn");
 	}, []);
 
 	// ---------------------------------------------------------------------------
@@ -122,15 +103,6 @@ export default function HomeScreen(): React.ReactElement {
 						)}
 					</View>
 				</View>
-
-				{/* Daily motivation card */}
-				<MotivationCard
-					message={motivationMessage}
-					onPress={handleMotivationPress}
-				/>
-
-				{/* Time saved this week */}
-				<TimeSavedCard weeklySuccessCount={weeklySuccessCount} />
 
 				{/* Inline check-in hero */}
 				<InlineCheckin checkin={checkin} onExpand={handleCheckinExpand} />
