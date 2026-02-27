@@ -18,11 +18,13 @@ import type {
 	NotificationStyle,
 	SpendingLimitMode,
 } from "@/src/domain/types";
+import { requestPermissions } from "@/src/services/notifications";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+	Alert,
 	KeyboardAvoidingView,
 	Platform,
 	ScrollView,
@@ -303,6 +305,17 @@ export default function OnboardingScreen(): React.ReactElement {
 					has_budget: hasBudget,
 				},
 			});
+
+			// Request notification permission if not off
+			if (notificationStyle !== "off") {
+				const granted = await requestPermissions();
+				if (!granted) {
+					Alert.alert(
+						"Notifications Disabled",
+						"You can enable notifications in your device settings.",
+					);
+				}
+			}
 
 			// After demo, go to paywall with onboarding context
 			router.replace({

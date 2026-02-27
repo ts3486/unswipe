@@ -2,7 +2,8 @@
 // No default exports other than the required route component.
 // TypeScript strict mode.
 
-import { Stack } from "expo-router";
+import * as Notifications from "expo-notifications";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import type React from "react";
 import { useEffect, useRef } from "react";
@@ -12,10 +13,23 @@ import { AppState, type AppStateStatus, LogBox } from "react-native";
 // It covers interactive elements (e.g. CTA buttons) and breaks E2E tests.
 // Warnings are still logged to the Metro console.
 LogBox.ignoreAllLogs();
+
+Notifications.setNotificationHandler({
+	handleNotification: async () => ({
+		shouldShowAlert: false,
+		shouldShowBanner: false,
+		shouldShowList: false,
+		shouldPlaySound: false,
+		shouldSetBadge: false,
+	}),
+});
+
 import { paperTheme } from "@/src/constants/theme";
-import { AnalyticsProvider } from "@/src/contexts/AnalyticsContext";
-import { AppStateProvider } from "@/src/contexts/AppStateContext";
-import { useAppState } from "@/src/contexts/AppStateContext";
+import {
+	AnalyticsProvider,
+	useAnalytics,
+} from "@/src/contexts/AnalyticsContext";
+import { AppStateProvider, useAppState } from "@/src/contexts/AppStateContext";
 import { DatabaseProvider } from "@/src/contexts/DatabaseContext";
 import { rescheduleAll } from "@/src/services/notifications";
 import { PaperProvider } from "react-native-paper";
@@ -28,6 +42,8 @@ import { PaperProvider } from "react-native-paper";
 function InnerLayout(): React.ReactElement {
 	const { userProfile, streak, todaySuccess, resistCount, isOnboarded } =
 		useAppState();
+	const analytics = useAnalytics();
+	const router = useRouter();
 	const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
 	useEffect(() => {
@@ -64,6 +80,32 @@ function InnerLayout(): React.ReactElement {
 			subscription.remove();
 		};
 	}, [isOnboarded, userProfile, streak, todaySuccess, resistCount]);
+
+	// Handle notification taps — track analytics and navigate to the correct screen.
+	useEffect(() => {
+		const subscription = Notifications.addNotificationResponseReceivedListener(
+			(response) => {
+				const identifier = response.notification.request.identifier;
+				analytics.track({
+					name: "notification_opened",
+					props: { type: identifier },
+				});
+				switch (identifier) {
+					case "daily-checkin":
+					case "streak-nudge":
+						router.push("/(tabs)/home");
+						break;
+					case "course-unlock":
+						router.push("/(tabs)/learn");
+						break;
+				}
+			},
+		);
+
+		return () => {
+			subscription.remove();
+		};
+	}, [router, analytics]);
 
 	return (
 		<>

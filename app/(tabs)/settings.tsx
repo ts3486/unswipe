@@ -8,10 +8,14 @@ import { useAppState } from "@/src/contexts/AppStateContext";
 import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
 import { updateUserProfile } from "@/src/data/repositories";
 import type { NotificationStyle } from "@/src/domain/types";
+import {
+	cancelAllScheduled,
+	requestPermissions,
+} from "@/src/services/notifications";
 import { router } from "expo-router";
 import type React from "react";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { Divider, List, Surface, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
@@ -85,6 +89,18 @@ export default function SettingsScreen(): React.ReactElement {
 		try {
 			await updateUserProfile(db, userProfile.id, { notification_style: next });
 			await refreshProfile();
+
+			if (next === "off") {
+				await cancelAllScheduled();
+			} else {
+				const granted = await requestPermissions();
+				if (!granted) {
+					Alert.alert(
+						"Notifications Disabled",
+						"You can enable notifications in your device settings.",
+					);
+				}
+			}
 		} finally {
 			setIsUpdating(false);
 		}
