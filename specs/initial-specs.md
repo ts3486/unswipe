@@ -51,7 +51,6 @@ You are an AI software engineering team (agent team). Build a self-care habit re
 
 ### 1.9 Notifications & device features
 - expo-notifications (local only)
-- expo-local-authentication + PIN fallback
 - expo-haptics optional
 
 ### 1.10 Analytics (MVP)
@@ -114,7 +113,6 @@ You are an AI software engineering team (agent team). Build a self-care habit re
    - starter_7d content from starter_7d.json
 
 7) Privacy
-   - app lock
    - stealth notifications
    - export/delete local data
 
@@ -142,7 +140,7 @@ App must load these seeds on first run and store into SQLite content tables.
 
 ## 4) Data model (SQLite)
 Tables:
-- user_profile(id TEXT PK, created_at TEXT, locale TEXT, notification_style TEXT, lock_enabled INT, plan_selected TEXT, goal_type TEXT, spending_budget_weekly INT NULL, spending_budget_daily INT NULL, spending_limit_mode TEXT NULL)
+- user_profile(id TEXT PK, created_at TEXT, locale TEXT, notification_style TEXT, plan_selected TEXT, goal_type TEXT, spending_budget_weekly INT NULL, spending_budget_daily INT NULL, spending_limit_mode TEXT NULL)
 - daily_checkin(id TEXT PK, date_local TEXT, mood INT, fatigue INT, urge INT, note TEXT NULL, opened_at_night INT NULL, spent_today INT NULL, spent_amount INT NULL)
 - urge_event(id TEXT PK, started_at TEXT, from_screen TEXT, urge_level INT, protocol_completed INT, urge_kind TEXT, action_type TEXT, action_id TEXT, outcome TEXT, trigger_tag TEXT NULL, spend_category TEXT NULL, spend_item_type TEXT NULL, spend_amount INT NULL)
 - progress(date_local TEXT PK, streak_current INT, resist_count_total INT, tree_level INT, last_success_date TEXT NULL, spend_avoided_count_total INT)
