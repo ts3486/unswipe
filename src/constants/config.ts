@@ -38,6 +38,13 @@ export const BREATHING_HOLD = 2 as const;
 export const BREATHING_EXHALE = 6 as const;
 
 // ---------------------------------------------------------------------------
+// Time Saved
+// ---------------------------------------------------------------------------
+
+/** Estimated minutes saved per successful meditation / avoided session. */
+export const TIME_SAVED_PER_MEDITATION_MINUTES = 12 as const;
+
+// ---------------------------------------------------------------------------
 // RevenueCat IAP
 // ---------------------------------------------------------------------------
 

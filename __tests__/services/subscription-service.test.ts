@@ -3,6 +3,7 @@
 
 import { RC_ENTITLEMENT_ID } from "@/src/constants/config";
 import {
+	enforceSubscriptionExpiry,
 	getCustomerInfo,
 	initPurchases,
 	isPremiumFromCustomerInfo,
@@ -125,6 +126,29 @@ describe("syncSubscriptionToDb", () => {
 		expect(params[6]).toBe(0); // is_premium = false
 	});
 
+	it("writes expired when no entitlement and local expires_at is past", async () => {
+		const info = makeEmptyCustomerInfo();
+		const db = createMockDb();
+		// Existing row was an active subscription that has since expired
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "active",
+			product_id: "unmatch_monthly_499",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: "2025-02-01T00:00:00Z", // past
+			is_premium: 1,
+			trial_started_at: "",
+			trial_ends_at: "",
+		});
+
+		await syncSubscriptionToDb(db as never, info);
+
+		const params = db._calls[0];
+		expect(params[1]).toBe("expired"); // status should be expired, not none
+		expect(params[6]).toBe(0); // is_premium = false
+	});
+
 	it("preserves trial fields from existing subscription", async () => {
 		const info = makePremiumCustomerInfo(
 			"unmatch_monthly_499",
@@ -205,5 +229,152 @@ describe("restorePurchases", () => {
 		const result = await restorePurchases();
 		expect(Purchases.restorePurchases).toHaveBeenCalledTimes(1);
 		expect(result).toBe(expected);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// enforceSubscriptionExpiry (offline fallback)
+// ---------------------------------------------------------------------------
+
+describe("enforceSubscriptionExpiry", () => {
+	it("does nothing when no subscription exists", async () => {
+		const db = createMockDb();
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).not.toHaveBeenCalled();
+	});
+
+	it("does nothing for lifetime subscriptions", async () => {
+		const db = createMockDb();
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "lifetime",
+			product_id: "unmatch_lifetime_2999",
+			period: "lifetime",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: "",
+			is_premium: 1,
+			trial_started_at: "",
+			trial_ends_at: "",
+		});
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).not.toHaveBeenCalled();
+	});
+
+	it("does nothing when expires_at is empty", async () => {
+		const db = createMockDb();
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "active",
+			product_id: "unmatch_monthly_499",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: "",
+			is_premium: 1,
+			trial_started_at: "",
+			trial_ends_at: "",
+		});
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).not.toHaveBeenCalled();
+	});
+
+	it("does nothing when subscription is still within grace period", async () => {
+		// Expired 1 day ago — within the 3-day grace period
+		const expiredRecently = new Date(
+			Date.now() - 1 * 24 * 60 * 60 * 1000,
+		).toISOString();
+		const db = createMockDb();
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "active",
+			product_id: "unmatch_monthly_499",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: expiredRecently,
+			is_premium: 1,
+			trial_started_at: "",
+			trial_ends_at: "",
+		});
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).not.toHaveBeenCalled();
+	});
+
+	it("marks subscription expired when past grace period", async () => {
+		// Expired 4 days ago — past the 3-day grace period
+		const expiredLongAgo = new Date(
+			Date.now() - 4 * 24 * 60 * 60 * 1000,
+		).toISOString();
+		const db = createMockDb();
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "active",
+			product_id: "unmatch_monthly_499",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: expiredLongAgo,
+			is_premium: 1,
+			trial_started_at: "2025-01-01T00:00:00Z",
+			trial_ends_at: "2025-01-08T00:00:00Z",
+		});
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).toHaveBeenCalledTimes(1);
+		const params = db._calls[0];
+		expect(params[1]).toBe("expired"); // status
+		expect(params[6]).toBe(0); // is_premium = false
+		expect(params[7]).toBe("2025-01-01T00:00:00Z"); // trial_started_at preserved
+		expect(params[8]).toBe("2025-01-08T00:00:00Z"); // trial_ends_at preserved
+	});
+
+	it("does nothing when subscription is not yet expired", async () => {
+		const futureDate = new Date(
+			Date.now() + 10 * 24 * 60 * 60 * 1000,
+		).toISOString();
+		const db = createMockDb();
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "active",
+			product_id: "unmatch_monthly_499",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: futureDate,
+			is_premium: 1,
+			trial_started_at: "",
+			trial_ends_at: "",
+		});
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).not.toHaveBeenCalled();
+	});
+
+	it("does nothing for already-expired records (status=expired)", async () => {
+		const expiredLongAgo = new Date(
+			Date.now() - 10 * 24 * 60 * 60 * 1000,
+		).toISOString();
+		const db = createMockDb();
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "expired",
+			product_id: "unmatch_monthly_499",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: expiredLongAgo,
+			is_premium: 0,
+			trial_started_at: "",
+			trial_ends_at: "",
+		});
+
+		await enforceSubscriptionExpiry(db as never);
+
+		expect(db.runAsync).not.toHaveBeenCalled();
 	});
 });

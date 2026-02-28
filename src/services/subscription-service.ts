@@ -7,7 +7,10 @@ import {
 	REVENUECAT_API_KEY_ANDROID,
 	REVENUECAT_API_KEY_IOS,
 } from "@/src/constants/config";
-import { getSubscription, upsertSubscription } from "@/src/data/repositories/subscription-repository";
+import {
+	getSubscription,
+	upsertSubscription,
+} from "@/src/data/repositories/subscription-repository";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
@@ -15,6 +18,13 @@ import type {
 	PurchasesOffering,
 	PurchasesPackage,
 } from "react-native-purchases";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Grace period (days) before enforcing local expiry when RC is unreachable. */
+const OFFLINE_GRACE_PERIOD_DAYS = 3;
 
 // ---------------------------------------------------------------------------
 // Types re-exported for consumers
@@ -123,12 +133,17 @@ export async function syncSubscriptionToDb(
 	const entitlement = info.entitlements.active[RC_ENTITLEMENT_ID];
 
 	if (!entitlement) {
+		// If there was a previously active/expired subscription, mark as expired
+		// rather than none to preserve the subscription history.
+		const hadSubscription =
+			existing !== null &&
+			(existing.status === "active" || existing.status === "expired");
 		await upsertSubscription(db, {
-			status: "none",
-			product_id: "",
-			period: "lifetime",
-			started_at: "",
-			expires_at: "",
+			status: hadSubscription ? "expired" : "none",
+			product_id: existing?.product_id ?? "",
+			period: existing?.period ?? "lifetime",
+			started_at: existing?.started_at ?? "",
+			expires_at: existing?.expires_at ?? "",
 			is_premium: false,
 			trial_started_at: trialStartedAt,
 			trial_ends_at: trialEndsAt,
@@ -148,5 +163,54 @@ export async function syncSubscriptionToDb(
 		is_premium: true,
 		trial_started_at: trialStartedAt,
 		trial_ends_at: trialEndsAt,
+	});
+}
+
+// ---------------------------------------------------------------------------
+// Offline expiry enforcement
+// ---------------------------------------------------------------------------
+
+/**
+ * Local-only fallback when RevenueCat is unreachable.
+ * Checks the stored `expires_at` against the current time + a grace period.
+ * If the subscription has been expired longer than `OFFLINE_GRACE_PERIOD_DAYS`,
+ * marks `is_premium = false` and `status = 'expired'` locally.
+ *
+ * Skips lifetime subs, already-expired records, and rows with no `expires_at`.
+ */
+export async function enforceSubscriptionExpiry(
+	db: SQLiteDatabase,
+): Promise<void> {
+	const existing = await getSubscription(db);
+	if (!existing) return;
+
+	// Lifetime subs never expire; already-expired or non-active need no action.
+	if (
+		existing.status === "lifetime" ||
+		existing.status === "expired" ||
+		existing.status === "none"
+	) {
+		return;
+	}
+
+	// No expires_at means we can't enforce locally.
+	if (!existing.expires_at) return;
+
+	const expiresAt = new Date(existing.expires_at).getTime();
+	const graceMs = OFFLINE_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+	const now = Date.now();
+
+	// Still within the subscription period or grace window.
+	if (now < expiresAt + graceMs) return;
+
+	await upsertSubscription(db, {
+		status: "expired",
+		product_id: existing.product_id,
+		period: existing.period,
+		started_at: existing.started_at,
+		expires_at: existing.expires_at,
+		is_premium: false,
+		trial_started_at: existing.trial_started_at,
+		trial_ends_at: existing.trial_ends_at,
 	});
 }

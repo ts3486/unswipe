@@ -37,7 +37,9 @@ import {
 import { useContent } from "@/src/hooks/useContent";
 import { rescheduleAll } from "@/src/services/notifications";
 import {
+	enforceSubscriptionExpiry,
 	getCustomerInfo,
+	initPurchases,
 	syncSubscriptionToDb,
 } from "@/src/services/subscription-service";
 import { PaperProvider } from "react-native-paper";
@@ -75,6 +77,20 @@ function InnerLayout(): React.ReactElement {
 		);
 	}, [allContent, completedIds, currentDayIndex]);
 
+	// Initialize RevenueCat SDK once on mount (before any RC operations).
+	const rcInitializedRef = useRef(false);
+	useEffect(() => {
+		if (rcInitializedRef.current) return;
+		rcInitializedRef.current = true;
+		void (async () => {
+			try {
+				await initPurchases();
+			} catch {
+				// Log-only — don't crash if RC init fails (offline / bad key).
+			}
+		})();
+	}, []);
+
 	useEffect(() => {
 		// Only schedule after onboarding is complete and state is loaded.
 		if (!isOnboarded || userProfile === null) {
@@ -107,7 +123,13 @@ function InnerLayout(): React.ReactElement {
 							await syncSubscriptionToDb(db, info);
 							await refreshPremiumStatus();
 						} catch {
-							// Silent — network may be unavailable.
+							// RC unreachable — enforce expiry locally with grace period.
+							try {
+								await enforceSubscriptionExpiry(db);
+								await refreshPremiumStatus();
+							} catch {
+								// Silent — DB may also be unavailable.
+							}
 						}
 					})();
 
