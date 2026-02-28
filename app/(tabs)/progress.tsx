@@ -49,7 +49,6 @@ interface WeeklyStats {
 	panicSuccessRate: number;
 	panicSuccessCount: number;
 	panicTotalCount: number;
-	meditationCount: number;
 	spendAvoidedCount: number;
 }
 
@@ -86,18 +85,18 @@ function getLastWeekRange(today: string): { start: string; end: string } {
 interface WeekComparisonCardProps {
 	thisWeekSuccessDays: number;
 	lastWeekSuccessDays: number;
-	thisWeekMeditations: number;
-	lastWeekMeditations: number;
+	thisWeekResets: number;
+	lastWeekResets: number;
 }
 
 function WeekComparisonCard({
 	thisWeekSuccessDays,
 	lastWeekSuccessDays,
-	thisWeekMeditations,
-	lastWeekMeditations,
+	thisWeekResets,
+	lastWeekResets,
 }: WeekComparisonCardProps): React.ReactElement {
 	const daysDelta = thisWeekSuccessDays - lastWeekSuccessDays;
-	const meditationsDelta = thisWeekMeditations - lastWeekMeditations;
+	const resetsDelta = thisWeekResets - lastWeekResets;
 
 	function deltaColor(delta: number): string {
 		if (delta > 0) return colors.success;
@@ -136,21 +135,21 @@ function WeekComparisonCard({
 					<View style={styles.comparisonDivider} />
 					<View style={styles.comparisonCol}>
 						<Text variant="labelSmall" style={styles.comparisonColHeader}>
-							Meditations
+							Resets succeeded
 						</Text>
 						<Text variant="titleLarge" style={styles.comparisonThis}>
-							{thisWeekMeditations}
+							{thisWeekResets}
 						</Text>
 						<Text
 							variant="labelSmall"
 							style={[
 								styles.comparisonDelta,
-								{ color: deltaColor(meditationsDelta) },
+								{ color: deltaColor(resetsDelta) },
 							]}
 						>
-							{meditationsDelta === 0
+							{resetsDelta === 0
 								? "— same"
-								: `${deltaStr(meditationsDelta)} vs last week`}
+								: `${deltaStr(resetsDelta)} vs last week`}
 						</Text>
 					</View>
 				</View>
@@ -202,7 +201,6 @@ export default function ProgressScreen(): React.ReactElement {
 		panicSuccessRate: 0,
 		panicSuccessCount: 0,
 		panicTotalCount: 0,
-		meditationCount: 0,
 		spendAvoidedCount: 0,
 	};
 
@@ -270,7 +268,6 @@ export default function ProgressScreen(): React.ReactElement {
 		const successDays = successDaySet.size;
 		const panicTotal = events.filter((e) => e.outcome !== "ongoing").length;
 		const panicSuccess = events.filter((e) => e.outcome === "success").length;
-		const meditationCount = events.filter((e) => e.outcome === "success").length;
 		const spendAvoided = events.filter(
 			(e) => e.urge_kind === "spend" && e.outcome === "success",
 		).length;
@@ -282,7 +279,6 @@ export default function ProgressScreen(): React.ReactElement {
 			panicSuccessRate: panicTotal > 0 ? panicSuccess / panicTotal : 0,
 			panicSuccessCount: panicSuccess,
 			panicTotalCount: panicTotal,
-			meditationCount,
 			spendAvoidedCount: spendAvoided,
 		});
 
@@ -302,9 +298,6 @@ export default function ProgressScreen(): React.ReactElement {
 		}
 
 		const lastWeekSuccessDays = lastWeekSuccessDaySet.size;
-		const lastWeekMeditationCount = lastWeekEvents.filter(
-			(e) => e.outcome === "success",
-		).length;
 		const lastWeekPanicTotal = lastWeekEvents.filter(
 			(e) => e.outcome !== "ongoing",
 		).length;
@@ -323,7 +316,6 @@ export default function ProgressScreen(): React.ReactElement {
 				lastWeekPanicTotal > 0 ? lastWeekPanicSuccess / lastWeekPanicTotal : 0,
 			panicSuccessCount: lastWeekPanicSuccess,
 			panicTotalCount: lastWeekPanicTotal,
-			meditationCount: lastWeekMeditationCount,
 			spendAvoidedCount: lastWeekSpendAvoided,
 		});
 	}, [db, today]);
@@ -641,16 +633,16 @@ export default function ProgressScreen(): React.ReactElement {
 					<WeekComparisonCard
 						thisWeekSuccessDays={weeklyStats.successDays}
 						lastWeekSuccessDays={lastWeekStats.successDays}
-						thisWeekMeditations={weeklyStats.meditationCount}
-						lastWeekMeditations={lastWeekStats.meditationCount}
+						thisWeekResets={weeklyStats.panicSuccessCount}
+						lastWeekResets={lastWeekStats.panicSuccessCount}
 					/>
 
 					{/* Weekly insight cards */}
 					<WeeklyInsightCard
 						dowCounts={dowCounts}
 						timeCounts={timeCounts}
-						thisWeekMeditations={weeklyStats.meditationCount}
-						lastWeekMeditations={lastWeekStats.meditationCount}
+						thisWeekResets={weeklyStats.panicSuccessCount}
+						lastWeekResets={lastWeekStats.panicSuccessCount}
 					/>
 
 					{/* Weekly stats */}
@@ -685,14 +677,6 @@ export default function ProgressScreen(): React.ReactElement {
 									weeklyStats.panicSuccessCount > 0
 										? colors.primary
 										: colors.muted
-								}
-							/>
-							<Divider style={styles.divider} />
-							<StatRow
-								label="Meditations this week"
-								value={String(weeklyStats.meditationCount)}
-								valueColor={
-									weeklyStats.meditationCount > 0 ? colors.secondary : colors.muted
 								}
 							/>
 							<Divider style={styles.divider} />
