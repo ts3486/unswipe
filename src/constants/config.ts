@@ -14,15 +14,9 @@ export const MEDITATION_RANK_CAP = 30 as const;
 /** Number of successful meditations required to advance one rank. */
 export const MEDITATION_RANK_PER_LEVEL = 5 as const;
 
-/** Estimated minutes saved per successful meditation/reset. */
-export const TIME_SAVED_PER_MEDITATION_MINUTES = 2 as const;
-
 // Life Tree uses the same progression constants as Meditation Rank.
 export const LIFE_TREE_CAP = MEDITATION_RANK_CAP;
 export const LIFE_TREE_MEDITATION_PER_LEVEL = MEDITATION_RANK_PER_LEVEL;
-
-/** Estimated minutes saved per successful meditation (used by TimeSavedCard). */
-export const TIME_SAVED_PER_MEDITATION_MINUTES = 15 as const;
 
 // ---------------------------------------------------------------------------
 // Breathing exercise timings (seconds)
