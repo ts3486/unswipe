@@ -11,17 +11,19 @@ import {
 	getDailyMessage,
 } from "@/src/components/MotivationCard";
 import { PrivacyBadge } from "@/src/components/PrivacyBadge";
+import { TimeSavedCard } from "@/src/components/TimeSavedCard";
 import { colors } from "@/src/constants/theme";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { getCatalog } from "@/src/data/seed-loader";
 import { useCheckin } from "@/src/hooks/useCheckin";
 import { useContent } from "@/src/hooks/useContent";
+import { useWeeklySuccessCount } from "@/src/hooks/useWeeklySuccessCount";
 import { getLocalDateString } from "@/src/utils/date";
 import { router } from "expo-router";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Chip, Surface, Text } from "react-native-paper";
+import { Button, Card, Chip, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -44,6 +46,7 @@ export default function HomeScreen(): React.ReactElement {
 	} = useContent(userProfile?.created_at ?? null);
 
 	const checkin = useCheckin();
+	const { weeklySuccessCount } = useWeeklySuccessCount();
 	const [checkinOverlayVisible, setCheckinOverlayVisible] = useState(false);
 
 	const catalog = getCatalog();
@@ -109,6 +112,9 @@ export default function HomeScreen(): React.ReactElement {
 					</View>
 				</View>
 
+				{/* Daily motivation message */}
+				<MotivationCard message={dailyMessage} />
+
 				{/* Inline check-in hero */}
 				<InlineCheckin checkin={checkin} onExpand={handleCheckinExpand} />
 
@@ -139,6 +145,9 @@ export default function HomeScreen(): React.ReactElement {
 					meditationCount={meditationCount}
 				/>
 
+				{/* Weekly time saved */}
+				<TimeSavedCard weeklySuccessCount={weeklySuccessCount} />
+
 				{/* Spacer to prevent content from hiding behind sticky CTA */}
 				<View style={styles.bottomSpacer} />
 			</ScrollView>
@@ -163,36 +172,6 @@ export default function HomeScreen(): React.ReactElement {
 				<CheckinOverlay checkin={checkin} onClose={handleCheckinClose} />
 			)}
 		</View>
-	);
-}
-
-// ---------------------------------------------------------------------------
-// StatCard sub-component
-// ---------------------------------------------------------------------------
-
-interface StatCardProps {
-	value: number;
-	label: string;
-	valueColor: string;
-}
-
-function StatCard({
-	value,
-	label,
-	valueColor,
-}: StatCardProps): React.ReactElement {
-	return (
-		<Surface style={styles.statCard} elevation={2}>
-			<Text
-				variant="displaySmall"
-				style={[styles.statValue, { color: valueColor }]}
-			>
-				{value}
-			</Text>
-			<Text variant="labelMedium" style={styles.statLabel}>
-				{label}
-			</Text>
-		</Surface>
 	);
 }
 
@@ -242,30 +221,6 @@ const styles = StyleSheet.create({
 	successChipText: {
 		color: colors.success,
 		fontSize: 12,
-	},
-	statsRow: {
-		flexDirection: "row",
-		gap: 12,
-	},
-	statCard: {
-		flex: 1,
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		padding: 16,
-		alignItems: "center",
-		borderWidth: 1,
-		borderColor: colors.border,
-	},
-	statValue: {
-		fontWeight: "800",
-		letterSpacing: -1,
-		lineHeight: 52,
-	},
-	statLabel: {
-		color: colors.muted,
-		textTransform: "uppercase",
-		letterSpacing: 0.8,
-		marginTop: 2,
 	},
 	courseCard: {
 		backgroundColor: colors.surface,

@@ -18,6 +18,9 @@ export const MEDITATION_RANK_PER_LEVEL = 5 as const;
 export const LIFE_TREE_CAP = MEDITATION_RANK_CAP;
 export const LIFE_TREE_MEDITATION_PER_LEVEL = MEDITATION_RANK_PER_LEVEL;
 
+/** Estimated minutes saved per successful meditation (used by TimeSavedCard). */
+export const TIME_SAVED_PER_MEDITATION_MINUTES = 15 as const;
+
 // ---------------------------------------------------------------------------
 // Breathing exercise timings (seconds)
 // ---------------------------------------------------------------------------
