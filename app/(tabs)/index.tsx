@@ -11,13 +11,11 @@ import {
 	getDailyMessage,
 } from "@/src/components/MotivationCard";
 import { PrivacyBadge } from "@/src/components/PrivacyBadge";
-import { TimeSavedCard } from "@/src/components/TimeSavedCard";
 import { colors } from "@/src/constants/theme";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { getCatalog } from "@/src/data/seed-loader";
 import { useCheckin } from "@/src/hooks/useCheckin";
 import { useContent } from "@/src/hooks/useContent";
-import { useWeeklySuccessCount } from "@/src/hooks/useWeeklySuccessCount";
 import { getLocalDateString } from "@/src/utils/date";
 import { router } from "expo-router";
 import type React from "react";
@@ -46,7 +44,6 @@ export default function HomeScreen(): React.ReactElement {
 	} = useContent(userProfile?.created_at ?? null);
 
 	const checkin = useCheckin();
-	const { weeklySuccessCount } = useWeeklySuccessCount();
 	const [checkinOverlayVisible, setCheckinOverlayVisible] = useState(false);
 
 	const catalog = getCatalog();
@@ -115,16 +112,6 @@ export default function HomeScreen(): React.ReactElement {
 				{/* Inline check-in hero */}
 				<InlineCheckin checkin={checkin} onExpand={handleCheckinExpand} />
 
-				{/* Stat row */}
-				<View style={styles.statsRow}>
-					<StatCard value={streak} label="Streak" valueColor={colors.success} />
-					<StatCard
-						value={meditationCount}
-						label="Meditations"
-						valueColor={colors.primary}
-					/>
-				</View>
-
 				{/* Today's course card */}
 				{!contentLoading && todayContent !== null && (
 					<Card style={styles.courseCard} mode="contained">
@@ -147,20 +134,9 @@ export default function HomeScreen(): React.ReactElement {
 					</Card>
 				)}
 
-				{/* Time saved this week */}
-				<TimeSavedCard weeklySuccessCount={weeklySuccessCount} />
-
 				<MeditationRank
 					level={meditationRank}
 					meditationCount={meditationCount}
-				/>
-
-				{/* Daily motivation */}
-				<MotivationCard
-					message={dailyMessage}
-					onPress={() => {
-						router.push("/(tabs)/learn");
-					}}
 				/>
 
 				{/* Spacer to prevent content from hiding behind sticky CTA */}

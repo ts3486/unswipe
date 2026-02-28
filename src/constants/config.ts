@@ -35,16 +35,6 @@ export const BREATHING_HOLD = 2 as const;
 export const BREATHING_EXHALE = 6 as const;
 
 // ---------------------------------------------------------------------------
-// Time saved estimation
-// ---------------------------------------------------------------------------
-
-/**
- * Estimated minutes saved per successful meditation.
- * Based on the average time spent per dating app session.
- */
-export const TIME_SAVED_PER_MEDITATION_MINUTES = 12 as const;
-
-// ---------------------------------------------------------------------------
 // RevenueCat IAP
 // ---------------------------------------------------------------------------
 
