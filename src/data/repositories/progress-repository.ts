@@ -19,6 +19,11 @@ interface ProgressRow {
 	spend_avoided_count_total: number;
 }
 
+// Maps DB row to domain model.
+// Note: the DB column is `resist_count_total` (legacy name) while the domain
+// model uses `meditation_count_total`. They represent the same value — the
+// cumulative count of successful panic resets. A column rename migration was
+// deferred to avoid risk; the mapping is handled here instead.
 function rowToProgress(row: ProgressRow): Progress {
 	return {
 		date_local: row.date_local,

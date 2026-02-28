@@ -88,7 +88,7 @@ export function InlineCheckin({
 					style={styles.detailsLink}
 					onPress={handleDetails}
 				>
-					Edit details
+					View details
 				</Text>
 			</Surface>
 		);

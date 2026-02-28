@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS user_profile (
   notification_style TEXT NOT NULL DEFAULT 'normal',
   plan_selected TEXT,
   goal_type TEXT,
-  spending_budget_weekly INTEGER,
-  spending_budget_daily INTEGER,
-  spending_limit_mode TEXT
+  spending_budget_weekly INTEGER,  -- V2: budget setup UI not yet implemented
+  spending_budget_daily INTEGER,   -- V2: budget setup UI not yet implemented
+  spending_limit_mode TEXT         -- V2: budget setup UI not yet implemented
 );
 `.trim();
 

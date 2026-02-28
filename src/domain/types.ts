@@ -50,9 +50,9 @@ export interface UserProfile {
   notification_style: NotificationStyle;
   plan_selected: string;
   goal_type: GoalType;
-  spending_budget_weekly: number | null;
-  spending_budget_daily: number | null;
-  spending_limit_mode: SpendingLimitMode | null;
+  spending_budget_weekly: number | null; // V2 — not yet populated; budget setup UI planned for a future release
+  spending_budget_daily: number | null; // V2 — not yet populated
+  spending_limit_mode: SpendingLimitMode | null; // V2 — not yet populated
 }
 
 /**

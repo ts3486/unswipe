@@ -39,8 +39,8 @@ const TIME_LABELS: Record<string, string> = {
 function buildInsights(
 	dowCounts: DayOfWeekCount[],
 	timeCounts: TimeOfDayCount[],
-	thisWeekMeditations: number,
-	lastWeekMeditations: number,
+	thisWeekResets: number,
+	lastWeekResets: number,
 ): string[] {
 	const insights: string[] = [];
 
@@ -51,7 +51,7 @@ function buildInsights(
 	);
 	if (bestDow.count > 0) {
 		insights.push(
-			`You meditate most on ${DOW_LABELS[bestDow.dayOfWeek] ?? "weekdays"}`,
+			`You reset most on ${DOW_LABELS[bestDow.dayOfWeek] ?? "weekdays"}`,
 		);
 	}
 
@@ -67,20 +67,20 @@ function buildInsights(
 	}
 
 	// Weekly trend
-	if (lastWeekMeditations > 0) {
+	if (lastWeekResets > 0) {
 		const pct = Math.round(
-			((thisWeekMeditations - lastWeekMeditations) / lastWeekMeditations) * 100,
+			((thisWeekResets - lastWeekResets) / lastWeekResets) * 100,
 		);
 		if (pct > 0) {
-			insights.push(`Meditations up ${pct}% vs last week`);
+			insights.push(`Resets up ${pct}% vs last week`);
 		} else if (pct < 0) {
-			insights.push(`Meditations down ${Math.abs(pct)}% vs last week`);
+			insights.push(`Resets down ${Math.abs(pct)}% vs last week`);
 		} else {
-			insights.push("Same number of meditations as last week");
+			insights.push("Same number of resets as last week");
 		}
-	} else if (thisWeekMeditations > 0) {
+	} else if (thisWeekResets > 0) {
 		insights.push(
-			`${thisWeekMeditations} meditation${thisWeekMeditations > 1 ? "s" : ""} this week — great start`,
+			`${thisWeekResets} reset${thisWeekResets > 1 ? "s" : ""} this week — great start`,
 		);
 	}
 
@@ -94,8 +94,8 @@ function buildInsights(
 interface WeeklyInsightCardProps {
 	dowCounts: DayOfWeekCount[];
 	timeCounts: TimeOfDayCount[];
-	thisWeekMeditations: number;
-	lastWeekMeditations: number;
+	thisWeekResets: number;
+	lastWeekResets: number;
 	rotateIntervalMs?: number;
 }
 
@@ -106,15 +106,15 @@ interface WeeklyInsightCardProps {
 export function WeeklyInsightCard({
 	dowCounts,
 	timeCounts,
-	thisWeekMeditations,
-	lastWeekMeditations,
+	thisWeekResets,
+	lastWeekResets,
 	rotateIntervalMs = 4000,
 }: WeeklyInsightCardProps): React.ReactElement | null {
 	const insights = buildInsights(
 		dowCounts,
 		timeCounts,
-		thisWeekMeditations,
-		lastWeekMeditations,
+		thisWeekResets,
+		lastWeekResets,
 	);
 	const [index, setIndex] = useState(0);
 	const opacity = useSharedValue(1);
