@@ -15,18 +15,18 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Logo + "Today done" chip
 - Inline daily check-in
 - Today's course card
-- Resist Rank display
+- Meditation Rank display
 - Sticky bottom "Reset" CTA
-- **[NEW] Free vs Paid state** — unpaid: show Resist button (navigates to paywall after first free use), locked progress area, first course day only, bottom "Unlock Unmatch — $6.99" banner
-- **[NEW] Time Saved counter** — "You've saved ~X hours this week" (12 min per avoided session)
-- **[NEW] Daily Motivation Card** — rotating preset messages from seed data, tappable to expand
+- **[DONE] Stat row** — streak count + total meditation count
+- **[DONE] Time Saved counter** — "You've saved ~X hours this week" (12 min per avoided session)
+- **[DONE] Daily Motivation Card** — rotating preset messages from seed data, tappable to navigate to Learn
 - **[NEW] Privacy Badge** — shield icon + "100% offline" label
 
 ### /(tabs)/panic
 - State machine: select_urge → breathing → select_action → spend_delay (if spend) → log_outcome → complete
 - **[NEW] Haptic feedback** — light pulses on inhale/exhale start (expo-haptics)
 - **[NEW] Visual breathing guide** — expanding/contracting circle animation (4s inhale, 2s hold, 6s exhale), blue gradient #4C8DFF → #7AA7FF
-- **[NEW] Outcome screen enhancement** — confetti/particle animation on success, Resist Rank level-up display, "Share your streak" button
+- **[NEW] Outcome screen enhancement** — confetti/particle animation on success, Meditation Rank level-up display, "Share your streak" button
 
 ### /(tabs)/progress
 - Monthly calendar with success-day highlighting
@@ -43,16 +43,16 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Notification style toggle
 - Blocker guide link
 - Privacy/data export link
-- **[NEW] "Why We Charge" section** — tappable row: "Why Unmatch costs $6.99" with explanation content
-- **[NEW] "Unlock Unmatch" row** — always visible for free users
+- **[DONE] "Why We Charge" section** — expandable row with explanation content
+- **[DONE] "Unlock Unmatch" row** — visible for non-premium users (trial expired or free)
 
 ### /paywall
-- **[REDESIGN] One-time purchase UI** — replaces monthly/yearly toggle
-- Layout: Emotional hook → Social proof bar → 3 value props with icons → Price block ($6.99) → CTA ("Unlock Unmatch") → Trust signals
-- Headline: "You've already taken the first step"
-- Subtitle: "One payment. Yours forever. No subscription."
-- Trust: "All data stays on your device", "No account required", "Restore purchase" link
-- **[NEW] Trigger points:** after first free reset, 2nd+ panic tap (unpaid), Day 2+ course, Progress tab (unpaid), Settings row
+- **[DONE] Two modes:** trial offer (post-onboarding) vs. trial expired (conversion)
+- **Trial offer mode:** 7-day free trial CTA → auto-renews to $4.99/month
+- **Trial expired mode:** Subscribe $4.99/month CTA + Restore purchase link
+- Feature list with icons, price comparison callout, trust signals
+- **[DONE] Connected to RevenueCat** — real purchase flow via `purchasePackage()`, restore via `restorePurchases()`
+- **[DONE] Subscription sync on app foreground** — keeps `isPremium` in sync with App Store
 
 ### /settings/blocker-guide
 - Device blocker setup guide (unchanged)
@@ -66,14 +66,14 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - **[NEW] Coping actions used** display
 
 ## Domain Rules
-- Resist Rank: starts 1, +1 per 5 resists, never decreases, cap 30
+- Meditation Rank: starts 1, +1 per 5 meditations, never decreases, cap 30
 - Day boundary: device local timezone midnight
 - Day success: panic_success_count >= 1 OR daily_task_completed
 - Once success that day, later fails don't remove it
 - Urge kinds: swipe, check, spend
 - Spend categories: iap, date, gift, tipping, transport, other
 - **[NEW] Time saved calculation:** each avoided session = 12 minutes saved (internal constant)
-- **[NEW] Free tier:** 1 free panic reset, then paywall gate. Home tab partially visible.
+- **[DONE] Subscription gating:** `isPremium` is the single gate. True during active trial or paid subscription. False when trial expires without subscribing or subscription lapses. Non-premium users are redirected to paywall.
 
 ## Data
 - Seed: `data/seed/catalog.json` (triggers, actions, spend delay cards)
@@ -89,7 +89,7 @@ This document tracks feature-level requirements, screen specs, and implementatio
   - **[DONE] Weekly summary** (Sunday evening)
   - **[DONE] Course unlock notification** (8am daily, days 2–7, if lesson not yet completed)
 - Analytics (no free-text, no spend_amount, no notes)
-- Subscription/paywall (IAP — one-time purchase $6.99)
+- Subscription/paywall (IAP — $4.99/month with 7-day free trial, via RevenueCat)
 - **[NEW] Share service** — generate shareable streak card image via native share sheet
 
 ## Accessibility
@@ -99,5 +99,6 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Gender-neutral, inclusive language (maintained)
 
 ## Changelog
+- 2026-02-28: Wired paywall to RevenueCat (purchase + restore); added subscription sync on app foreground; fixed dailyTaskCompleted to query content_progress; added TimeSaved, MotivationCard, StatCards to Home; added "Why We Charge" + plan state handling to Settings; updated paywall model to $4.99/month + 7-day trial; renamed Resist Rank → Meditation Rank in SPEC; removed unused LifeTree components; fixed redundant ternary in panic screen
 - 2026-02-28: Implemented course unlock notification scheduling (8am, days 2–7); removed stealth notification mode; simplified onboarding notification step to On/Off with support text
 - 2026-02-27: Added UI/UX improvement specs (paywall redesign, onboarding demo reset, panic polish, home/progress enhancements, notifications, share, accessibility)

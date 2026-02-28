@@ -92,7 +92,7 @@ export default function TabsLayout(): React.ReactElement {
       <Tabs.Screen
         name="panic"
         options={{
-          title: 'Pause',
+          title: 'Meditate',
           tabBarIcon: ({ size }) => (
             <Animated.View style={{ opacity: pauseOpacity }}>
               <MaterialCommunityIcons

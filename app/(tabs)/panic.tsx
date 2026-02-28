@@ -35,12 +35,8 @@ import ViewShot from "react-native-view-shot";
 
 export default function PanicScreen(): React.ReactElement {
 	const flow = usePanicFlow();
-	const {
-		refreshProgress,
-		streak,
-		meditationCount,
-		meditationRank,
-	} = useAppState();
+	const { refreshProgress, streak, meditationCount, meditationRank } =
+		useAppState();
 	const analytics = useAnalytics();
 	const catalog = getCatalog();
 	const prevStepRef = useRef(flow.step);
@@ -272,9 +268,7 @@ function SelectUrgeStep({
 				</View>
 
 				<Text variant="bodySmall" style={styles.footerNote}>
-					{catalog.copy["panicCta"] !== undefined
-						? "Tap to start a guided reset"
-						: "Tap to start a guided reset"}
+					Tap to start a guided reset
 				</Text>
 			</ScrollView>
 		</View>
@@ -302,7 +296,7 @@ function BreathingStep({
 				showsVerticalScrollIndicator={false}
 			>
 				<StepHeader
-					title="One minute to reset"
+					title="Take a breath"
 					subtitle="Follow the breathing guide below"
 				/>
 
@@ -698,10 +692,10 @@ function CompleteStep({
 	}, [isSuccess, pulseAnim]);
 
 	const title = isSuccess
-		? (catalogCopy["successTitle"] ?? "Nice work.")
+		? (catalogCopy.successTitle ?? "Nice work.")
 		: isOngoing
 			? "Noted."
-			: (catalogCopy["failTitle"] ?? "It's okay.");
+			: (catalogCopy.failTitle ?? "It's okay.");
 
 	const body = isSuccess
 		? urgeKind === "swipe"
@@ -710,7 +704,7 @@ function CompleteStep({
 				? "You broke the cycle. That takes real strength."
 				: urgeKind === "spend"
 					? "You held your ground. Your future self thanks you."
-					: (catalogCopy["successBody"] ?? "Small wins add up.")
+					: (catalogCopy.successBody ?? "Small wins add up.")
 		: isOngoing
 			? "Staying aware is part of the process."
 			: "It happens. You came here — that still counts.";
@@ -786,19 +780,21 @@ function CompleteStep({
 				)}
 
 				{/* Rank level-up notice — success + leveled-up only */}
-				{isSuccess && meditationRankLeveledUp && meditationRankAfter !== null && (
-					<View style={styles.rankLevelUpBadge}>
-						<MaterialCommunityIcons
-							name="star-circle"
-							size={18}
-							color={colors.warning}
-							style={styles.rankLevelUpIcon}
-						/>
-						<Text variant="labelMedium" style={styles.rankLevelUpText}>
-							Meditation Rank {meditationRankAfter} unlocked
-						</Text>
-					</View>
-				)}
+				{isSuccess &&
+					meditationRankLeveledUp &&
+					meditationRankAfter !== null && (
+						<View style={styles.rankLevelUpBadge}>
+							<MaterialCommunityIcons
+								name="star-circle"
+								size={18}
+								color={colors.warning}
+								style={styles.rankLevelUpIcon}
+							/>
+							<Text variant="labelMedium" style={styles.rankLevelUpText}>
+								Meditation Rank {meditationRankAfter} unlocked
+							</Text>
+						</View>
+					)}
 
 				{/* Body */}
 				<Text variant="bodyLarge" style={styles.completeBody}>

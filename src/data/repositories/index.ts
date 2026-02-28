@@ -3,50 +3,51 @@
 // No default exports.
 
 export {
-  getUserProfile,
-  createUserProfile,
-  updateUserProfile,
-} from './user-repository';
+	getUserProfile,
+	createUserProfile,
+	updateUserProfile,
+} from "./user-repository";
 
 export {
-  createUrgeEvent,
-  getUrgeEventsByDate,
-  countSuccessesByDate,
-  countSpendAvoidedByDate,
-  getUrgeEventsInRange,
-  getUrgeCountByDayOfWeek,
-  getUrgeCountByTimeOfDay,
-  getSuccessCountInRange,
-} from './urge-repository';
-export type { DayOfWeekCount, TimeOfDayCount } from './urge-repository';
+	createUrgeEvent,
+	getUrgeEventsByDate,
+	countSuccessesByDate,
+	countSpendAvoidedByDate,
+	getUrgeEventsInRange,
+	getUrgeCountByDayOfWeek,
+	getUrgeCountByTimeOfDay,
+	getSuccessCountInRange,
+} from "./urge-repository";
+export type { DayOfWeekCount, TimeOfDayCount } from "./urge-repository";
 
 export {
-  createCheckin,
-  getCheckinByDate,
-  getCheckinsInRange,
-} from './checkin-repository';
+	createCheckin,
+	getCheckinByDate,
+	getCheckinsInRange,
+} from "./checkin-repository";
 
 export {
-  getProgress,
-  getLatestProgress,
-  upsertProgress,
-  getAllProgressDates,
-} from './progress-repository';
+	getProgress,
+	getLatestProgress,
+	upsertProgress,
+	getAllProgressDates,
+} from "./progress-repository";
 
 export {
-  getAllContent,
-  getContentByDay,
-  markContentCompleted,
-  getContentProgress,
-  isContentCompleted,
-} from './content-repository';
+	getAllContent,
+	getContentByDay,
+	markContentCompleted,
+	getContentProgress,
+	isContentCompleted,
+	hasContentCompletedOnDate,
+} from "./content-repository";
 
 export {
-  getSubscription,
-  upsertSubscription,
-  recordLifetimePurchase,
-  recordMonthlySubscription,
-  recordTrialStart,
-  getTrialInfo,
-} from './subscription-repository';
-export type { TrialInfo } from './subscription-repository';
+	getSubscription,
+	upsertSubscription,
+	recordLifetimePurchase,
+	recordMonthlySubscription,
+	recordTrialStart,
+	getTrialInfo,
+} from "./subscription-repository";
+export type { TrialInfo } from "./subscription-repository";
