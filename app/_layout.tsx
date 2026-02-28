@@ -30,9 +30,16 @@ import {
 	useAnalytics,
 } from "@/src/contexts/AnalyticsContext";
 import { AppStateProvider, useAppState } from "@/src/contexts/AppStateContext";
-import { DatabaseProvider } from "@/src/contexts/DatabaseContext";
+import {
+	DatabaseProvider,
+	useDatabaseContext,
+} from "@/src/contexts/DatabaseContext";
 import { useContent } from "@/src/hooks/useContent";
 import { rescheduleAll } from "@/src/services/notifications";
+import {
+	getCustomerInfo,
+	syncSubscriptionToDb,
+} from "@/src/services/subscription-service";
 import { PaperProvider } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
@@ -41,8 +48,15 @@ import { PaperProvider } from "react-native-paper";
 // ---------------------------------------------------------------------------
 
 function InnerLayout(): React.ReactElement {
-	const { userProfile, streak, todaySuccess, meditationCount, isOnboarded } =
-		useAppState();
+	const {
+		userProfile,
+		streak,
+		todaySuccess,
+		meditationCount,
+		isOnboarded,
+		refreshPremiumStatus,
+	} = useAppState();
+	const { db } = useDatabaseContext();
 	const analytics = useAnalytics();
 	const router = useRouter();
 	const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -56,7 +70,8 @@ function InnerLayout(): React.ReactElement {
 			(c) => c.day_index === currentDayIndex,
 		);
 		return (
-			todayItems.length > 0 && todayItems.every((c) => completedIds.has(c.content_id))
+			todayItems.length > 0 &&
+			todayItems.every((c) => completedIds.has(c.content_id))
 		);
 	}, [allContent, completedIds, currentDayIndex]);
 
@@ -84,14 +99,27 @@ function InnerLayout(): React.ReactElement {
 					appStateRef.current === "inactive";
 				const isActive = nextAppState === "active";
 
-				if (wasBackground && isActive && userProfile !== null) {
-					void rescheduleAll(userProfile, {
-						streak,
-						todaySuccess,
-						meditationCount,
-						currentDayIndex,
-						todayContentCompleted,
-					});
+				if (wasBackground && isActive) {
+					// Sync subscription status with App Store on foreground.
+					void (async () => {
+						try {
+							const info = await getCustomerInfo();
+							await syncSubscriptionToDb(db, info);
+							await refreshPremiumStatus();
+						} catch {
+							// Silent — network may be unavailable.
+						}
+					})();
+
+					if (userProfile !== null) {
+						void rescheduleAll(userProfile, {
+							streak,
+							todaySuccess,
+							meditationCount,
+							currentDayIndex,
+							todayContentCompleted,
+						});
+					}
 				}
 
 				appStateRef.current = nextAppState;
@@ -101,7 +129,17 @@ function InnerLayout(): React.ReactElement {
 		return () => {
 			subscription.remove();
 		};
-	}, [isOnboarded, userProfile, streak, todaySuccess, meditationCount, currentDayIndex, todayContentCompleted]);
+	}, [
+		isOnboarded,
+		userProfile,
+		streak,
+		todaySuccess,
+		meditationCount,
+		currentDayIndex,
+		todayContentCompleted,
+		db,
+		refreshPremiumStatus,
+	]);
 
 	// Handle notification taps — track analytics and navigate to the correct screen.
 	useEffect(() => {

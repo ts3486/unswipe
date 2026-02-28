@@ -23,7 +23,14 @@ import { Divider, List, Text } from "react-native-paper";
 // ---------------------------------------------------------------------------
 
 export default function SettingsScreen(): React.ReactElement {
-	const { userProfile, refreshProfile, refreshPremiumStatus, trialInfo } = useAppState();
+	const {
+		userProfile,
+		refreshProfile,
+		refreshPremiumStatus,
+		trialInfo,
+		isPremium,
+	} = useAppState();
+	const [whyWeChargeExpanded, setWhyWeChargeExpanded] = useState(false);
 	const { db } = useDatabaseContext();
 
 	const [notifStyle, setNotifStyle] = useState<NotificationStyle>(
@@ -156,12 +163,14 @@ export default function SettingsScreen(): React.ReactElement {
 				{trialInfo.isTrialActive ? (
 					<List.Item
 						title="Free Trial"
-						description={`${trialInfo.trialDaysRemaining} day${trialInfo.trialDaysRemaining === 1 ? '' : 's'} remaining — tap to subscribe`}
+						description={`${trialInfo.trialDaysRemaining} day${trialInfo.trialDaysRemaining === 1 ? "" : "s"} remaining — tap to subscribe`}
 						titleStyle={styles.listTitle}
 						descriptionStyle={styles.listDesc}
 						accessibilityLabel={`Free trial — ${trialInfo.trialDaysRemaining} days remaining. Tap to subscribe.`}
 						accessibilityRole="button"
-						onPress={() => { router.push("/paywall"); }}
+						onPress={() => {
+							router.push("/paywall");
+						}}
 						left={() => (
 							<List.Icon icon="clock-outline" color={colors.warning} />
 						)}
@@ -169,18 +178,60 @@ export default function SettingsScreen(): React.ReactElement {
 							<List.Icon icon="chevron-right" color={color} />
 						)}
 					/>
-				) : (
+				) : isPremium ? (
 					<List.Item
-						title="Unmatch Unlocked"
+						title="Unmatch Subscriber"
 						description="You have full access. Thank you!"
 						titleStyle={styles.listTitle}
 						descriptionStyle={styles.listDesc}
-						accessibilityLabel="Unmatch is unlocked — you have full access"
+						accessibilityLabel="Unmatch subscriber — you have full access"
 						left={() => (
 							<List.Icon icon="check-circle-outline" color={colors.success} />
 						)}
 					/>
+				) : (
+					<List.Item
+						title="Unlock Unmatch"
+						description="Subscribe to keep full access"
+						titleStyle={styles.listTitle}
+						descriptionStyle={styles.listDesc}
+						accessibilityLabel="Unlock Unmatch — tap to subscribe"
+						accessibilityRole="button"
+						onPress={() => {
+							router.push("/paywall");
+						}}
+						left={() => (
+							<List.Icon icon="lock-open-outline" color={colors.primary} />
+						)}
+						right={({ color }) => (
+							<List.Icon icon="chevron-right" color={color} />
+						)}
+					/>
 				)}
+				<Divider style={{ backgroundColor: colors.border }} />
+				<List.Item
+					title="Why we charge"
+					description={
+						whyWeChargeExpanded
+							? "Unmatch has no ads, no data selling, and no investors. Your subscription keeps the app independent and your data private."
+							: "Tap to learn more"
+					}
+					descriptionNumberOfLines={whyWeChargeExpanded ? 5 : 1}
+					titleStyle={styles.listTitle}
+					descriptionStyle={styles.listDesc}
+					onPress={() => {
+						setWhyWeChargeExpanded(!whyWeChargeExpanded);
+					}}
+					accessibilityLabel="Why we charge — tap to learn more"
+					accessibilityRole="button"
+					left={() => <List.Icon icon="heart-outline" color={colors.muted} />}
+					right={() => (
+						<List.Icon
+							icon={whyWeChargeExpanded ? "chevron-up" : "chevron-down"}
+							color={colors.muted}
+						/>
+					)}
+				/>
 			</View>
 
 			{/* Dev-only tools — __DEV__ is false in production builds, so the
@@ -255,9 +306,7 @@ export default function SettingsScreen(): React.ReactElement {
 								);
 							}}
 							accessibilityLabel="Reset onboarding for testing"
-							left={() => (
-								<List.Icon icon="restart" color={colors.warning} />
-							)}
+							left={() => <List.Icon icon="restart" color={colors.warning} />}
 						/>
 					</View>
 				</>

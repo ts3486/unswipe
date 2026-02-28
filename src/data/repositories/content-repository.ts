@@ -106,6 +106,21 @@ export async function getContentProgress(
 }
 
 /**
+ * Returns true if any content item was completed on the given local date
+ * (YYYY-MM-DD). Used to derive dailyTaskCompleted for day-success calculation.
+ */
+export async function hasContentCompletedOnDate(
+	db: SQLiteDatabase,
+	dateLocal: string,
+): Promise<boolean> {
+	const row = await db.getFirstAsync<{ count: number }>(
+		"SELECT COUNT(*) AS count FROM content_progress WHERE DATE(completed_at) = ?;",
+		[dateLocal],
+	);
+	return (row?.count ?? 0) > 0;
+}
+
+/**
  * Returns true if the given content item has been marked as completed.
  */
 export async function isContentCompleted(

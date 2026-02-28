@@ -6,17 +6,20 @@ import { Logo } from "@/src/components/Logo";
 import { colors } from "@/src/constants/theme";
 import { useAnalytics } from "@/src/contexts/AnalyticsContext";
 import { useAppState } from "@/src/contexts/AppStateContext";
+import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
+import {
+	getOfferings,
+	isPremiumFromCustomerInfo,
+	purchasePackage,
+	restorePurchases,
+	syncSubscriptionToDb,
+} from "@/src/services/subscription-service";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const PRODUCT_MONTHLY = "unmatch_monthly_499";
 
 // ---------------------------------------------------------------------------
 // Data
@@ -41,7 +44,8 @@ const FEATURES: FeatureItem[] = [
 
 export default function PaywallScreen(): React.ReactElement {
 	const analytics = useAnalytics();
-	const { unlockPremium, startTrial, trialInfo } = useAppState();
+	const { startTrial, trialInfo, refreshPremiumStatus } = useAppState();
+	const { db } = useDatabaseContext();
 
 	const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
 	const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -74,33 +78,62 @@ export default function PaywallScreen(): React.ReactElement {
 		}
 	}, [startTrial, analytics]);
 
-	const handlePurchase = useCallback((): void => {
+	const handlePurchase = useCallback(async (): Promise<void> => {
+		if (isPurchasing) return;
 		setIsPurchasing(true);
 		setFeedbackMessage(null);
-		// Stub: in production this calls StoreKit / RevenueCat.
-		setTimeout(async () => {
-			try {
-				await unlockPremium(PRODUCT_MONTHLY, "monthly");
-				analytics.track({
-					name: "purchase_completed",
-					props: { product_id: PRODUCT_MONTHLY, period: "monthly" },
-				});
-				router.replace("/(tabs)");
-			} catch {
+		try {
+			const offering = await getOfferings();
+			if (!offering || !offering.monthly) {
+				setFeedbackMessage(
+					"Unable to load subscription options. Please try again.",
+				);
+				return;
+			}
+			const customerInfo = await purchasePackage(offering.monthly);
+			await syncSubscriptionToDb(db, customerInfo);
+			await refreshPremiumStatus();
+			const productId = offering.monthly.product.identifier;
+			analytics.track({
+				name: "purchase_completed",
+				props: { product_id: productId, period: "monthly" },
+			});
+			router.replace("/(tabs)");
+		} catch (err: unknown) {
+			const isCancelled =
+				err !== null &&
+				typeof err === "object" &&
+				"userCancelled" in err &&
+				(err as { userCancelled: boolean }).userCancelled;
+			if (!isCancelled) {
 				setFeedbackMessage(
 					"Purchase could not be completed. Please try again.",
 				);
-			} finally {
-				setIsPurchasing(false);
 			}
-		}, 800);
-	}, [unlockPremium, analytics]);
+		} finally {
+			setIsPurchasing(false);
+		}
+	}, [isPurchasing, db, refreshPremiumStatus, analytics]);
 
-	const handleRestore = useCallback((): void => {
-		setFeedbackMessage(
-			"Restore purchases is not available yet in this version.",
-		);
-	}, []);
+	const handleRestore = useCallback(async (): Promise<void> => {
+		if (isPurchasing) return;
+		setIsPurchasing(true);
+		setFeedbackMessage(null);
+		try {
+			const customerInfo = await restorePurchases();
+			await syncSubscriptionToDb(db, customerInfo);
+			await refreshPremiumStatus();
+			if (isPremiumFromCustomerInfo(customerInfo)) {
+				router.replace("/(tabs)");
+			} else {
+				setFeedbackMessage("No previous purchases found.");
+			}
+		} catch {
+			setFeedbackMessage("Could not restore purchases. Please try again.");
+		} finally {
+			setIsPurchasing(false);
+		}
+	}, [isPurchasing, db, refreshPremiumStatus]);
 
 	// ---------------------------------------------------------------------------
 	// Render
@@ -166,7 +199,9 @@ export default function PaywallScreen(): React.ReactElement {
 				<>
 					<Button
 						mode="contained"
-						onPress={() => { void handleStartTrial(); }}
+						onPress={() => {
+							void handleStartTrial();
+						}}
 						loading={isPurchasing}
 						disabled={isPurchasing}
 						style={styles.ctaButton}
@@ -189,7 +224,9 @@ export default function PaywallScreen(): React.ReactElement {
 				<>
 					<Button
 						mode="contained"
-						onPress={handlePurchase}
+						onPress={() => {
+							void handlePurchase();
+						}}
 						loading={isPurchasing}
 						disabled={isPurchasing}
 						style={styles.ctaButton}
@@ -208,7 +245,9 @@ export default function PaywallScreen(): React.ReactElement {
 					{/* Restore link */}
 					<Button
 						mode="text"
-						onPress={handleRestore}
+						onPress={() => {
+							void handleRestore();
+						}}
 						textColor={colors.muted}
 						style={styles.restoreButton}
 						labelStyle={styles.restoreLabel}
