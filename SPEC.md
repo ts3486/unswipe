@@ -77,6 +77,8 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Spend categories: iap, date, gift, tipping, transport, other
 - **[NEW] Time saved calculation:** each avoided session = 12 minutes saved (internal constant)
 - **[DONE] Subscription gating:** `isPremium` is the single gate. True during active trial or paid subscription. False when trial expires without subscribing or subscription lapses. Non-premium users are redirected to paywall.
+- **[DONE] RevenueCat SDK initialization:** `initPurchases()` called once on app mount before any RC operations. Handles init failure gracefully (no crash).
+- **[DONE] Subscription expiry enforcement:** On foreground, after `getCustomerInfo()`, if RC reports no active entitlement and local `expires_at` is past, mark `is_premium = false`, `status = 'expired'`. Offline fallback: if RC call fails, check local `expires_at` + 3-day grace period before marking expired.
 
 ## Data
 - Seed: `data/seed/catalog.json` (triggers, actions, spend delay cards)
@@ -93,6 +95,8 @@ This document tracks feature-level requirements, screen specs, and implementatio
   - **[DONE] Course unlock notification** (8am daily, days 2–7, if lesson not yet completed)
 - Analytics (no free-text, no spend_amount, no notes)
 - Subscription/paywall (IAP — $4.99/month with 7-day free trial, via RevenueCat)
+  - **[DONE] RevenueCat SDK init** on app launch (platform-gated API key)
+  - **[DONE] Subscription expiry enforcement** with 3-day offline grace period
 - **[NEW] Share service** — generate shareable streak card image via native share sheet
 
 ## Accessibility
@@ -106,4 +110,5 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - 2026-02-28: Streamlined onboarding from 10-12 screens to 4 steps; merged Goal+Triggers+Course into single screen; added back navigation; removed demo check-in/action dump; deferred budget setup and notification preference to post-onboarding
 - 2026-02-28: Wired paywall to RevenueCat (purchase + restore); added subscription sync on app foreground; fixed dailyTaskCompleted to query content_progress; added TimeSaved, MotivationCard, StatCards to Home; added "Why We Charge" + plan state handling to Settings; updated paywall model to $4.99/month + 7-day trial; renamed Resist Rank → Meditation Rank in SPEC; removed unused LifeTree components; fixed redundant ternary in panic screen
 - 2026-02-28: Implemented course unlock notification scheduling (8am, days 2–7); removed stealth notification mode; simplified onboarding notification step to On/Off with support text
+- 2026-02-28: RevenueCat IAP fix: added initPurchases() call on app mount; added subscription expiry enforcement with 3-day offline grace period; kept Android API key as placeholder
 - 2026-02-27: Added UI/UX improvement specs (paywall redesign, onboarding demo reset, panic polish, home/progress enhancements, notifications, share, accessibility)
