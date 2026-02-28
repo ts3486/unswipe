@@ -259,7 +259,7 @@ export default function CheckinScreen(): React.ReactElement {
 						Daily check-in
 					</Text>
 					<Text variant="bodyMedium" style={styles.subtitle}>
-						Just for you — no right answers.
+						At the end of the day, reflect on your mood, urges, and patterns. This helps you understand your relationship with dating apps and track your progress over time.
 					</Text>
 				</View>
 
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
 		minWidth: 44,
 	},
 	yesChipSelected: {
-		backgroundColor: "#1A3D2E",
-		borderColor: colors.success,
+		backgroundColor: "#0F1D3A",
+		borderColor: colors.primary,
 	},
 	noChipSelected: {
-		backgroundColor: "#1A1220",
-		borderColor: "#E05A5A",
+		backgroundColor: "#0F1D3A",
+		borderColor: colors.primary,
 	},
 	ratingChipText: {
 		color: colors.muted,

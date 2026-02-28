@@ -1,11 +1,11 @@
 // LifeTree — visual component showing the current tree level and progress.
 // Uses react-native-paper components. No emojis. TypeScript strict mode.
-// Phase 4A: idle pulse animation on container + ring pop on new resist.
+// Phase 4A: idle pulse animation on container + ring pop on new meditation.
 // Phase 4B: increased padding, displayMedium level, "Your Life Tree" title.
 
 import {
 	LIFE_TREE_CAP,
-	LIFE_TREE_RESISTS_PER_LEVEL,
+	LIFE_TREE_MEDITATION_PER_LEVEL,
 } from "@/src/constants/config";
 import { colors } from "@/src/constants/theme";
 import type React from "react";
@@ -25,7 +25,7 @@ const AnimatedSurface = Animated.createAnimatedComponent(Surface);
 
 interface LifeTreeProps {
 	level: number;
-	resistCount: number;
+	meditationCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -36,23 +36,23 @@ interface LifeTreeProps {
  * Displays the Life Tree level and progress toward the next level.
  * At max level (30) shows a "Max level" badge instead of progress bar.
  * Animates with an idle pulse on the container and a ring pop when a new
- * resist is earned.
+ * meditation is earned.
  */
 export function LifeTree({
 	level,
-	resistCount,
+	meditationCount,
 }: LifeTreeProps): React.ReactElement {
 	const isMaxLevel = level >= LIFE_TREE_CAP;
 
-	// Resists within the current level window (0–4 out of 5).
-	const resistsIntoCurrentLevel = resistCount % LIFE_TREE_RESISTS_PER_LEVEL;
+	// Meditations within the current level window (0–4 out of 5).
+	const meditationsIntoCurrentLevel = meditationCount % LIFE_TREE_MEDITATION_PER_LEVEL;
 	const progressFraction = isMaxLevel
 		? 1
-		: resistsIntoCurrentLevel / LIFE_TREE_RESISTS_PER_LEVEL;
+		: meditationsIntoCurrentLevel / LIFE_TREE_MEDITATION_PER_LEVEL;
 
 	// Number of "growth rings" to render (filled vs unfilled).
 	const rings = Array.from(
-		{ length: LIFE_TREE_RESISTS_PER_LEVEL },
+		{ length: LIFE_TREE_MEDITATION_PER_LEVEL },
 		(_, i) => i,
 	);
 
@@ -82,29 +82,29 @@ export function LifeTree({
 	}, [pulseAnim]);
 
 	// ---------------------------------------------------------------------------
-	// Ring pop animation on new resist
+	// Ring pop animation on new meditation
 	// ---------------------------------------------------------------------------
 
 	// One Animated.Value per ring slot.
 	const ringScales = useRef<Animated.Value[]>(
 		Array.from(
-			{ length: LIFE_TREE_RESISTS_PER_LEVEL },
+			{ length: LIFE_TREE_MEDITATION_PER_LEVEL },
 			() => new Animated.Value(1),
 		),
 	).current;
 
-	// Track previous resistCount to detect increment.
-	const prevResistCount = useRef<number>(resistCount);
+	// Track previous meditation count to detect increment.
+	const prevMeditationCount = useRef<number>(meditationCount);
 
 	useEffect(() => {
-		if (resistCount > prevResistCount.current) {
+		if (meditationCount > prevMeditationCount.current) {
 			// The newly-filled ring index within the current level window.
-			// resistsIntoCurrentLevel is already the updated value after increment.
-			const newlyFilledIndex = resistsIntoCurrentLevel - 1;
+			// meditationsIntoCurrentLevel is already updated after increment.
+			const newlyFilledIndex = meditationsIntoCurrentLevel - 1;
 			// Guard: only animate a valid ring index.
 			if (
 				newlyFilledIndex >= 0 &&
-				newlyFilledIndex < LIFE_TREE_RESISTS_PER_LEVEL
+				newlyFilledIndex < LIFE_TREE_MEDITATION_PER_LEVEL
 			) {
 				const scale = ringScales[newlyFilledIndex];
 				if (scale !== undefined) {
@@ -125,8 +125,8 @@ export function LifeTree({
 				}
 			}
 		}
-		prevResistCount.current = resistCount;
-	}, [resistCount, resistsIntoCurrentLevel, ringScales]);
+		prevMeditationCount.current = meditationCount;
+	}, [meditationCount, meditationsIntoCurrentLevel, ringScales]);
 
 	// ---------------------------------------------------------------------------
 	// Render
@@ -163,7 +163,7 @@ export function LifeTree({
 								key={i}
 								style={[
 									styles.ring,
-									i < resistsIntoCurrentLevel
+									i < meditationsIntoCurrentLevel
 										? styles.ringFilled
 										: styles.ringEmpty,
 									{
@@ -177,7 +177,7 @@ export function LifeTree({
 						<Text variant="labelSmall" style={styles.ringsLabel}>
 							{isMaxLevel
 								? "Max"
-								: `${resistsIntoCurrentLevel} / ${LIFE_TREE_RESISTS_PER_LEVEL}`}
+								: `${meditationsIntoCurrentLevel} / ${LIFE_TREE_MEDITATION_PER_LEVEL}`}
 						</Text>
 					</View>
 				</View>
@@ -191,7 +191,7 @@ export function LifeTree({
 					/>
 					{!isMaxLevel && (
 						<Text variant="labelSmall" style={styles.progressLabel}>
-							{LIFE_TREE_RESISTS_PER_LEVEL - resistsIntoCurrentLevel} more to
+							{LIFE_TREE_MEDITATION_PER_LEVEL - meditationsIntoCurrentLevel} more to
 							Level {level + 1}
 						</Text>
 					)}

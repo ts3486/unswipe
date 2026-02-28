@@ -103,6 +103,16 @@ const MIGRATE_ONE_TIME_TO_LIFETIME = `
 UPDATE subscription_state SET status = 'lifetime', period = 'lifetime' WHERE status = 'one_time';
 `.trim();
 
+// Migration: add trial_started_at column.
+const MIGRATE_SUBSCRIPTION_TRIAL_STARTED = `
+ALTER TABLE subscription_state ADD COLUMN trial_started_at TEXT;
+`.trim();
+
+// Migration: add trial_ends_at column.
+const MIGRATE_SUBSCRIPTION_TRIAL_ENDS = `
+ALTER TABLE subscription_state ADD COLUMN trial_ends_at TEXT;
+`.trim();
+
 /**
  * Opens the database, enables WAL mode, and creates all tables.
  * Must be called once at app startup before any repository is used.
@@ -130,6 +140,18 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // but expo-sqlite wraps errors — so we catch and ignore duplicate column errors.
   try {
     await db.execAsync(MIGRATE_SUBSCRIPTION_IS_PREMIUM);
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+
+  try {
+    await db.execAsync(MIGRATE_SUBSCRIPTION_TRIAL_STARTED);
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+
+  try {
+    await db.execAsync(MIGRATE_SUBSCRIPTION_TRIAL_ENDS);
   } catch {
     // Column already exists — safe to ignore.
   }

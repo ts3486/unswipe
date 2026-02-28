@@ -12,7 +12,7 @@ export type GoalType =
   | 'reduce_night_check'
   | 'reduce_spend';
 
-export type NotificationStyle = 'stealth' | 'normal' | 'off';
+export type NotificationStyle = 'normal' | 'off';
 
 export type UrgeKind = 'swipe' | 'check' | 'spend';
 
@@ -30,7 +30,7 @@ export type UrgeOutcome = 'success' | 'fail' | 'ongoing';
 
 export type SpendingLimitMode = 'soft' | 'pledge';
 
-export type SubscriptionStatus = 'active' | 'expired' | 'none' | 'lifetime';
+export type SubscriptionStatus = 'active' | 'expired' | 'none' | 'lifetime' | 'trial';
 
 export type SubscriptionPeriod = 'monthly' | 'lifetime';
 
@@ -101,7 +101,7 @@ export interface UrgeEvent {
 export interface Progress {
   date_local: string; // YYYY-MM-DD (PK)
   streak_current: number;
-  resist_count_total: number;
+  meditation_count_total: number;
   tree_level: number; // 1-30
   last_success_date: string | null; // YYYY-MM-DD
   spend_avoided_count_total: number;
@@ -141,6 +141,8 @@ export interface SubscriptionState {
   started_at: string; // ISO-8601 UTC
   expires_at: string; // ISO-8601 UTC
   is_premium: boolean;
+  trial_started_at: string; // ISO-8601 UTC, empty if no trial
+  trial_ends_at: string; // ISO-8601 UTC, empty if no trial
 }
 
 // ---------------------------------------------------------------------------

@@ -38,8 +38,8 @@ export default function PanicScreen(): React.ReactElement {
 	const {
 		refreshProgress,
 		streak,
-		resistCount,
-		resistRank,
+		meditationCount,
+		meditationRank,
 	} = useAppState();
 	const analytics = useAnalytics();
 	const catalog = getCatalog();
@@ -135,7 +135,7 @@ export default function PanicScreen(): React.ReactElement {
 				spendDelayCards={catalog.spend_delay_cards}
 				actions={catalog.actions}
 				onSelectAction={flow.selectAction}
-				onResisted={() => {
+				onMeditated={() => {
 					analytics.track({
 						name: "panic_outcome_logged",
 						props: {
@@ -198,11 +198,11 @@ export default function PanicScreen(): React.ReactElement {
 				outcome={flow.outcome}
 				catalogCopy={catalog.copy}
 				urgeKind={flow.urgeKind}
-				resistRankAfter={flow.resistRankAfter}
-				resistRankLeveledUp={flow.resistRankLeveledUp}
+				meditationRankAfter={flow.meditationRankAfter}
+				meditationRankLeveledUp={flow.meditationRankLeveledUp}
 				streak={streak}
-				resistCount={resistCount}
-				resistRank={resistRank}
+				meditationCount={meditationCount}
+				meditationRank={meditationRank}
 				onDone={() => {
 					void refreshProgress();
 					flow.reset();
@@ -404,7 +404,7 @@ interface SpendDelayStepProps {
 		action_type: string;
 	}>;
 	onSelectAction: (actionId: string) => void;
-	onResisted: () => void;
+	onMeditated: () => void;
 	onSpentAnyway: () => void;
 }
 
@@ -412,7 +412,7 @@ function SpendDelayStep({
 	spendDelayCards,
 	actions,
 	onSelectAction,
-	onResisted,
+	onMeditated,
 	onSpentAnyway,
 }: SpendDelayStepProps): React.ReactElement {
 	const actionMap = new Map(actions.map((a) => [a.id, a]));
@@ -449,12 +449,12 @@ function SpendDelayStep({
 				<View style={styles.outcomeButtons}>
 					<Button
 						mode="contained"
-						onPress={onResisted}
+						onPress={onMeditated}
 						style={[styles.outcomeButton, styles.outcomeButtonSuccess]}
 						contentStyle={styles.outcomeButtonContent}
 						textColor={colors.background}
 					>
-						I resisted
+						I meditated
 					</Button>
 					<Button
 						mode="outlined"
@@ -588,7 +588,7 @@ function LogOutcomeStep({
 						contentStyle={styles.outcomeButtonContent}
 						textColor={colors.background}
 					>
-						I resisted
+						I meditated
 					</Button>
 					<Button
 						mode="contained"
@@ -622,16 +622,16 @@ interface CompleteStepProps {
 	outcome: UrgeOutcome | null;
 	catalogCopy: Record<string, string>;
 	urgeKind: UrgeKind | null;
-	/** Updated resist rank after this session; null if not yet computed. */
-	resistRankAfter: number | null;
+	/** Updated meditation rank after this session; null if not yet computed. */
+	meditationRankAfter: number | null;
 	/** Whether the rank leveled up during this session. */
-	resistRankLeveledUp: boolean;
+	meditationRankLeveledUp: boolean;
 	/** Current streak in days (for the share card). */
 	streak: number;
-	/** Total urges resisted all-time (for the share card). */
-	resistCount: number;
-	/** Current resist rank (for the share card). */
-	resistRank: number;
+	/** Total meditations completed all-time (for the share card). */
+	meditationCount: number;
+	/** Current meditation rank (for the share card). */
+	meditationRank: number;
 	onDone: () => void;
 	onReset: () => void;
 }
@@ -640,11 +640,11 @@ function CompleteStep({
 	outcome,
 	catalogCopy,
 	urgeKind,
-	resistRankAfter,
-	resistRankLeveledUp,
+	meditationRankAfter,
+	meditationRankLeveledUp,
 	streak,
-	resistCount,
-	resistRank,
+	meditationCount,
+	meditationRank,
 	onDone,
 	onReset,
 }: CompleteStepProps): React.ReactElement {
@@ -731,8 +731,8 @@ function CompleteStep({
 					<ViewShot ref={shareCardRef} options={{ format: "png", quality: 1 }}>
 						<ShareStreakCard
 							streak={streak}
-							resistCount={resistCount}
-							resistRank={resistRank}
+							meditationCount={meditationCount}
+							meditationRank={meditationRank}
 						/>
 					</ViewShot>
 				</View>
@@ -776,17 +776,17 @@ function CompleteStep({
 					{title}
 				</Text>
 
-				{/* "+ 1 resist" badge — success only */}
+				{/* "+ 1 meditation" badge — success only */}
 				{isSuccess && (
-					<View style={styles.resistBadge}>
-						<Text variant="labelMedium" style={styles.resistBadgeText}>
-							+ 1 resist
+					<View style={styles.meditationBadge}>
+						<Text variant="labelMedium" style={styles.meditationBadgeText}>
+							+ 1 meditation
 						</Text>
 					</View>
 				)}
 
 				{/* Rank level-up notice — success + leveled-up only */}
-				{isSuccess && resistRankLeveledUp && resistRankAfter !== null && (
+				{isSuccess && meditationRankLeveledUp && meditationRankAfter !== null && (
 					<View style={styles.rankLevelUpBadge}>
 						<MaterialCommunityIcons
 							name="star-circle"
@@ -795,7 +795,7 @@ function CompleteStep({
 							style={styles.rankLevelUpIcon}
 						/>
 						<Text variant="labelMedium" style={styles.rankLevelUpText}>
-							Resist Rank {resistRankAfter} unlocked
+							Meditation Rank {meditationRankAfter} unlocked
 						</Text>
 					</View>
 				)}
@@ -1122,13 +1122,13 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		lineHeight: 26,
 	},
-	resistBadge: {
+	meditationBadge: {
 		backgroundColor: "#1A3D2E",
 		borderRadius: 12,
 		paddingHorizontal: 12,
 		paddingVertical: 4,
 	},
-	resistBadgeText: {
+	meditationBadgeText: {
 		color: colors.success,
 	},
 	rankLevelUpBadge: {

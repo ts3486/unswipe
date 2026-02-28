@@ -6,8 +6,8 @@ import { CheckinOverlay } from "@/src/components/CheckinOverlay";
 import { InlineCheckin } from "@/src/components/InlineCheckin";
 import { Logo } from "@/src/components/Logo";
 import { PrivacyBadge } from "@/src/components/PrivacyBadge";
-import { ResistRank } from "@/src/components/ResistRank";
-import { ResistRankCompact } from "@/src/components/ResistRankCompact";
+import { MeditationRank } from "@/src/components/MeditationRank";
+import { MeditationRankCompact } from "@/src/components/MeditationRankCompact";
 import { colors } from "@/src/constants/theme";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { getCatalog } from "@/src/data/seed-loader";
@@ -26,8 +26,8 @@ import { Button, Card, Chip, Surface, Text } from "react-native-paper";
 export default function HomeScreen(): React.ReactElement {
 	const {
 		streak,
-		resistRank,
-		resistCount,
+		meditationRank,
+		meditationCount,
 		todaySuccess,
 		userProfile,
 		isLoading,
@@ -128,7 +128,7 @@ export default function HomeScreen(): React.ReactElement {
 					</Card>
 				)}
 
-				<ResistRank level={resistRank} resistCount={resistCount} />
+				<MeditationRank level={meditationRank} meditationCount={meditationCount} />
 
 				{/* Spacer to prevent content from hiding behind sticky CTA */}
 				<View style={styles.bottomSpacer} />
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
 	},
 	resetButton: {
 		borderRadius: 14,
-		backgroundColor: colors.danger,
+		backgroundColor: colors.primary,
 	},
 	resetButtonContent: {
 		paddingVertical: 8,

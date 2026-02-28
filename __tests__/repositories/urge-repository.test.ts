@@ -539,32 +539,32 @@ describe("getWeeklySuccessCount", () => {
 // ---------------------------------------------------------------------------
 
 describe("time-saved calculation", () => {
-	const TIME_SAVED_PER_RESIST_MINUTES = 12;
+	const TIME_SAVED_PER_MEDITATION_MINUTES = 12;
 
-	it("0 resists = 0 minutes saved", () => {
-		expect(0 * TIME_SAVED_PER_RESIST_MINUTES).toBe(0);
+	it("0 meditations = 0 minutes saved", () => {
+		expect(0 * TIME_SAVED_PER_MEDITATION_MINUTES).toBe(0);
 	});
 
-	it("5 resists = 60 minutes = 1.0 hours", () => {
-		const minutes = 5 * TIME_SAVED_PER_RESIST_MINUTES;
+	it("5 meditations = 60 minutes = 1.0 hours", () => {
+		const minutes = 5 * TIME_SAVED_PER_MEDITATION_MINUTES;
 		expect(minutes).toBe(60);
 		expect(minutes / 60).toBe(1.0);
 	});
 
-	it("1 resist = 12 minutes (less than 1 hour — display as minutes)", () => {
-		const minutes = 1 * TIME_SAVED_PER_RESIST_MINUTES;
+	it("1 meditation = 12 minutes (less than 1 hour — display as minutes)", () => {
+		const minutes = 1 * TIME_SAVED_PER_MEDITATION_MINUTES;
 		expect(minutes).toBe(12);
 		expect(minutes < 60).toBe(true);
 	});
 
-	it("10 resists = 120 minutes = 2.0 hours", () => {
-		const minutes = 10 * TIME_SAVED_PER_RESIST_MINUTES;
+	it("10 meditations = 120 minutes = 2.0 hours", () => {
+		const minutes = 10 * TIME_SAVED_PER_MEDITATION_MINUTES;
 		expect(minutes / 60).toBe(2.0);
 	});
 
 	it("formatTimeSaved shows minutes when < 60", () => {
 		function formatTimeSaved(count: number): string {
-			const mins = count * TIME_SAVED_PER_RESIST_MINUTES;
+			const mins = count * TIME_SAVED_PER_MEDITATION_MINUTES;
 			if (mins < 60) return `~${mins} min`;
 			return `~${(mins / 60).toFixed(1)} hrs`;
 		}

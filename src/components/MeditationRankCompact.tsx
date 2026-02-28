@@ -1,10 +1,10 @@
-// ResistRankCompact — compact rank stat card for the home screen stat row.
-// Shows resist rank number and progress toward next rank.
+// MeditationRankCompact — compact rank stat card for the home screen stat row.
+// Shows meditation rank number and progress toward next rank.
 // TypeScript strict mode.
 
 import {
-	RESIST_RANK_CAP,
-	RESIST_RANK_RESISTS_PER_LEVEL,
+	MEDITATION_RANK_CAP,
+	MEDITATION_RANK_PER_LEVEL,
 } from "@/src/constants/config";
 import { colors } from "@/src/constants/theme";
 import type React from "react";
@@ -15,21 +15,21 @@ import { Surface, Text } from "react-native-paper";
 // Props
 // ---------------------------------------------------------------------------
 
-interface ResistRankCompactProps {
+interface MeditationRankCompactProps {
 	level: number;
-	resistCount: number;
+	meditationCount: number;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ResistRankCompact({
+export function MeditationRankCompact({
 	level,
-	resistCount,
-}: ResistRankCompactProps): React.ReactElement {
-	const isMaxLevel = level >= RESIST_RANK_CAP;
-	const resistsIntoCurrentLevel = resistCount % RESIST_RANK_RESISTS_PER_LEVEL;
+	meditationCount,
+}: MeditationRankCompactProps): React.ReactElement {
+	const isMaxLevel = level >= MEDITATION_RANK_CAP;
+	const meditationsIntoCurrentLevel = meditationCount % MEDITATION_RANK_PER_LEVEL;
 
 	return (
 		<Surface style={styles.card} elevation={2}>
@@ -42,7 +42,7 @@ export function ResistRankCompact({
 			<Text variant="labelSmall" style={styles.progress}>
 				{isMaxLevel
 					? "Max"
-					: `${resistsIntoCurrentLevel}/${RESIST_RANK_RESISTS_PER_LEVEL}`}
+					: `${meditationsIntoCurrentLevel}/${MEDITATION_RANK_PER_LEVEL}`}
 			</Text>
 		</Surface>
 	);

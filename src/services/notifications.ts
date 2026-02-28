@@ -4,7 +4,6 @@
 // side-effectful scheduler functions (require expo-notifications + device).
 //
 // Privacy rules:
-//   - Stealth notifications must not reference the app name or dating apps.
 //   - Notification content must never mention spending amounts.
 //
 // No default exports. TypeScript strict mode.
@@ -27,8 +26,7 @@ export interface NotificationContent {
 
 /**
  * Returns notification content for the evening nudge, or null when style is
- * 'off'. The stealth variant deliberately avoids any mention of the app or
- * dating-app context so it looks like a generic wellness reminder.
+ * 'off'.
  */
 export function buildEveningNudgeContent(
 	style: NotificationStyle,
@@ -36,10 +34,6 @@ export function buildEveningNudgeContent(
 	if (style === "off") {
 		return null;
 	}
-	if (style === "stealth") {
-		return { title: "Take a moment for yourself", body: "" };
-	}
-	// style === 'normal'
 	return {
 		title: "Feeling the urge?",
 		body: "Open Unmatch for a 60-second reset.",
@@ -52,11 +46,15 @@ export function buildEveningNudgeContent(
 
 /**
  * Returns notification content for the streak preservation nudge, or null
- * when the streak is below 3 (not worth nudging).
+ * when the streak is below 3 or style is 'off'.
  */
 export function buildStreakNudgeContent(
 	streakDays: number,
+	style: NotificationStyle,
 ): NotificationContent | null {
+	if (style === "off") {
+		return null;
+	}
 	if (streakDays < 3) {
 		return null;
 	}
@@ -71,16 +69,40 @@ export function buildStreakNudgeContent(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns notification content for the Sunday evening weekly summary.
- * resistCount and minutesSaved are the week's totals.
+ * Returns notification content for the Sunday evening weekly summary, or null
+ * when style is 'off'.
  */
 export function buildWeeklySummaryContent(
-	resistCount: number,
+	meditationCount: number,
 	minutesSaved: number,
-): NotificationContent {
+	style: NotificationStyle,
+): NotificationContent | null {
+	if (style === "off") {
+		return null;
+	}
 	return {
 		title: "Your week in review",
-		body: `This week: ${resistCount} urges resisted, ${minutesSaved} minutes saved. View your progress.`,
+		body: `This week: ${meditationCount} meditations completed, ${minutesSaved} minutes saved. View your progress.`,
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Pure helper: course unlock content
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns notification content for a course unlock notification, or null
+ * when style is 'off'.
+ */
+export function buildCourseUnlockContent(
+	style: NotificationStyle,
+): NotificationContent | null {
+	if (style === "off") {
+		return null;
+	}
+	return {
+		title: "Unmatch",
+		body: "A new lesson is available in your starter course.",
 	};
 }
 
@@ -116,6 +138,23 @@ export function shouldSendStreakNudge(
 		return false;
 	}
 	return !todaySuccess;
+}
+
+/**
+ * Returns true when a course unlock notification should be scheduled.
+ * Only notifies on days 2–7 when the user hasn't completed today's lesson.
+ */
+export function shouldSendCourseUnlock(
+	currentDayIndex: number,
+	todayContentCompleted: boolean,
+): boolean {
+	if (currentDayIndex <= 1) {
+		return false;
+	}
+	if (currentDayIndex > 7) {
+		return false;
+	}
+	return !todayContentCompleted;
 }
 
 /**
@@ -202,12 +241,13 @@ export async function scheduleEveningNudge(
 export async function scheduleStreakNudge(
 	streakDays: number,
 	todaySuccess: boolean,
+	notificationStyle: NotificationStyle,
 ): Promise<void> {
 	if (!shouldSendStreakNudge(streakDays, todaySuccess)) {
 		return;
 	}
 
-	const content = buildStreakNudgeContent(streakDays);
+	const content = buildStreakNudgeContent(streakDays, notificationStyle);
 	if (content === null) {
 		return;
 	}
@@ -238,10 +278,14 @@ export async function scheduleStreakNudge(
  * Always schedules regardless of today's activity.
  */
 export async function scheduleWeeklySummary(
-	resistCount: number,
+	meditationCount: number,
 	minutesSaved: number,
+	notificationStyle: NotificationStyle,
 ): Promise<void> {
-	const content = buildWeeklySummaryContent(resistCount, minutesSaved);
+	const content = buildWeeklySummaryContent(meditationCount, minutesSaved, notificationStyle);
+	if (content === null) {
+		return;
+	}
 
 	const now = new Date();
 	// Find next Sunday (0 = Sunday in JS Date).
@@ -268,6 +312,47 @@ export async function scheduleWeeklySummary(
 	});
 }
 
+/**
+ * Schedules the course unlock notification for today at 8:00 AM.
+ * Only fires on days 2–7 when the user hasn't completed today's lesson.
+ */
+export async function scheduleCourseUnlock(
+	notificationStyle: NotificationStyle,
+	currentDayIndex: number,
+	todayContentCompleted: boolean,
+): Promise<void> {
+	if (!shouldSendCourseUnlock(currentDayIndex, todayContentCompleted)) {
+		return;
+	}
+
+	const content = buildCourseUnlockContent(notificationStyle);
+	if (content === null) {
+		return;
+	}
+
+	const now = new Date();
+	const trigger = new Date(now);
+	trigger.setHours(8, 0, 0, 0); // 8am local
+
+	// If 8 AM already passed today, skip.
+	if (trigger <= now) {
+		return;
+	}
+
+	await ExpoNotifications.scheduleNotificationAsync({
+		content: {
+			title: content.title,
+			body: content.body,
+			sound: true,
+		},
+		trigger: {
+			type: ExpoNotifications.SchedulableTriggerInputTypes.DATE,
+			date: trigger,
+		},
+		identifier: "course-unlock",
+	});
+}
+
 // ---------------------------------------------------------------------------
 // Master scheduler
 // ---------------------------------------------------------------------------
@@ -275,7 +360,9 @@ export async function scheduleWeeklySummary(
 interface AppStateForNotifications {
 	streak: number;
 	todaySuccess: boolean;
-	resistCount: number;
+	meditationCount: number;
+	currentDayIndex: number;
+	todayContentCompleted: boolean;
 }
 
 /**
@@ -299,14 +386,16 @@ export async function rescheduleAll(
 	// Cancel previous schedule before rebuilding.
 	await cancelAllScheduled();
 
-	// Estimate minutes saved: 2 minutes per resist (simple heuristic for V1).
-	const MINUTES_PER_RESIST = 2;
-	const minutesSaved = appState.resistCount * MINUTES_PER_RESIST;
+	// Estimate minutes saved: 2 minutes per meditation (simple heuristic for V1).
+	const MINUTES_PER_MEDITATION = 2;
+	const minutesSaved = appState.meditationCount * MINUTES_PER_MEDITATION;
 
 	// Schedule each notification type — each guard-checks internally.
+	const style = userProfile.notification_style;
 	await Promise.all([
-		scheduleEveningNudge(userProfile.notification_style, appState.todaySuccess),
-		scheduleStreakNudge(appState.streak, appState.todaySuccess),
-		scheduleWeeklySummary(appState.resistCount, minutesSaved),
+		scheduleEveningNudge(style, appState.todaySuccess),
+		scheduleStreakNudge(appState.streak, appState.todaySuccess, style),
+		scheduleWeeklySummary(appState.meditationCount, minutesSaved, style),
+		scheduleCourseUnlock(style, appState.currentDayIndex, appState.todayContentCompleted),
 	]);
 }

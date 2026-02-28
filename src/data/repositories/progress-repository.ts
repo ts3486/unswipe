@@ -23,7 +23,7 @@ function rowToProgress(row: ProgressRow): Progress {
 	return {
 		date_local: row.date_local,
 		streak_current: row.streak_current,
-		resist_count_total: row.resist_count_total,
+		meditation_count_total: row.resist_count_total,
 		tree_level: row.tree_level,
 		last_success_date: row.last_success_date,
 		spend_avoided_count_total: row.spend_avoided_count_total,
@@ -80,7 +80,7 @@ export async function upsertProgress(
 		[
 			progress.date_local,
 			progress.streak_current,
-			progress.resist_count_total,
+			progress.meditation_count_total,
 			progress.tree_level,
 			progress.last_success_date ?? null,
 			progress.spend_avoided_count_total,

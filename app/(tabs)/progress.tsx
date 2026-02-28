@@ -49,7 +49,7 @@ interface WeeklyStats {
 	panicSuccessRate: number;
 	panicSuccessCount: number;
 	panicTotalCount: number;
-	resistCount: number;
+	meditationCount: number;
 	spendAvoidedCount: number;
 }
 
@@ -86,18 +86,18 @@ function getLastWeekRange(today: string): { start: string; end: string } {
 interface WeekComparisonCardProps {
 	thisWeekSuccessDays: number;
 	lastWeekSuccessDays: number;
-	thisWeekResists: number;
-	lastWeekResists: number;
+	thisWeekMeditations: number;
+	lastWeekMeditations: number;
 }
 
 function WeekComparisonCard({
 	thisWeekSuccessDays,
 	lastWeekSuccessDays,
-	thisWeekResists,
-	lastWeekResists,
+	thisWeekMeditations,
+	lastWeekMeditations,
 }: WeekComparisonCardProps): React.ReactElement {
 	const daysDelta = thisWeekSuccessDays - lastWeekSuccessDays;
-	const resistsDelta = thisWeekResists - lastWeekResists;
+	const meditationsDelta = thisWeekMeditations - lastWeekMeditations;
 
 	function deltaColor(delta: number): string {
 		if (delta > 0) return colors.success;
@@ -136,21 +136,21 @@ function WeekComparisonCard({
 					<View style={styles.comparisonDivider} />
 					<View style={styles.comparisonCol}>
 						<Text variant="labelSmall" style={styles.comparisonColHeader}>
-							Resists
+							Meditations
 						</Text>
 						<Text variant="titleLarge" style={styles.comparisonThis}>
-							{thisWeekResists}
+							{thisWeekMeditations}
 						</Text>
 						<Text
 							variant="labelSmall"
 							style={[
 								styles.comparisonDelta,
-								{ color: deltaColor(resistsDelta) },
+								{ color: deltaColor(meditationsDelta) },
 							]}
 						>
-							{resistsDelta === 0
+							{meditationsDelta === 0
 								? "— same"
-								: `${deltaStr(resistsDelta)} vs last week`}
+								: `${deltaStr(meditationsDelta)} vs last week`}
 						</Text>
 					</View>
 				</View>
@@ -166,8 +166,8 @@ function WeekComparisonCard({
 export default function ProgressScreen(): React.ReactElement {
 	const { db } = useDatabaseContext();
 	const {
-		resistRank,
-		resistCount: totalResistCount,
+		meditationRank,
+		meditationCount: totalMeditationCount,
 		streak,
 	} = useAppState();
 	const today = getLocalDateString();
@@ -202,7 +202,7 @@ export default function ProgressScreen(): React.ReactElement {
 		panicSuccessRate: 0,
 		panicSuccessCount: 0,
 		panicTotalCount: 0,
-		resistCount: 0,
+		meditationCount: 0,
 		spendAvoidedCount: 0,
 	};
 
@@ -270,7 +270,7 @@ export default function ProgressScreen(): React.ReactElement {
 		const successDays = successDaySet.size;
 		const panicTotal = events.filter((e) => e.outcome !== "ongoing").length;
 		const panicSuccess = events.filter((e) => e.outcome === "success").length;
-		const resistCount = events.filter((e) => e.outcome === "success").length;
+		const meditationCount = events.filter((e) => e.outcome === "success").length;
 		const spendAvoided = events.filter(
 			(e) => e.urge_kind === "spend" && e.outcome === "success",
 		).length;
@@ -282,7 +282,7 @@ export default function ProgressScreen(): React.ReactElement {
 			panicSuccessRate: panicTotal > 0 ? panicSuccess / panicTotal : 0,
 			panicSuccessCount: panicSuccess,
 			panicTotalCount: panicTotal,
-			resistCount,
+			meditationCount,
 			spendAvoidedCount: spendAvoided,
 		});
 
@@ -302,7 +302,7 @@ export default function ProgressScreen(): React.ReactElement {
 		}
 
 		const lastWeekSuccessDays = lastWeekSuccessDaySet.size;
-		const lastWeekResistCount = lastWeekEvents.filter(
+		const lastWeekMeditationCount = lastWeekEvents.filter(
 			(e) => e.outcome === "success",
 		).length;
 		const lastWeekPanicTotal = lastWeekEvents.filter(
@@ -323,7 +323,7 @@ export default function ProgressScreen(): React.ReactElement {
 				lastWeekPanicTotal > 0 ? lastWeekPanicSuccess / lastWeekPanicTotal : 0,
 			panicSuccessCount: lastWeekPanicSuccess,
 			panicTotalCount: lastWeekPanicTotal,
-			resistCount: lastWeekResistCount,
+			meditationCount: lastWeekMeditationCount,
 			spendAvoidedCount: lastWeekSpendAvoided,
 		});
 	}, [db, today]);
@@ -631,8 +631,8 @@ export default function ProgressScreen(): React.ReactElement {
 						>
 							<ShareStreakCard
 								streak={streak}
-								resistCount={totalResistCount}
-								resistRank={resistRank}
+								meditationCount={totalMeditationCount}
+								meditationRank={meditationRank}
 							/>
 						</ViewShot>
 					</View>
@@ -641,16 +641,16 @@ export default function ProgressScreen(): React.ReactElement {
 					<WeekComparisonCard
 						thisWeekSuccessDays={weeklyStats.successDays}
 						lastWeekSuccessDays={lastWeekStats.successDays}
-						thisWeekResists={weeklyStats.resistCount}
-						lastWeekResists={lastWeekStats.resistCount}
+						thisWeekMeditations={weeklyStats.meditationCount}
+						lastWeekMeditations={lastWeekStats.meditationCount}
 					/>
 
 					{/* Weekly insight cards */}
 					<WeeklyInsightCard
 						dowCounts={dowCounts}
 						timeCounts={timeCounts}
-						thisWeekResists={weeklyStats.resistCount}
-						lastWeekResists={lastWeekStats.resistCount}
+						thisWeekMeditations={weeklyStats.meditationCount}
+						lastWeekMeditations={lastWeekStats.meditationCount}
 					/>
 
 					{/* Weekly stats */}
@@ -689,10 +689,10 @@ export default function ProgressScreen(): React.ReactElement {
 							/>
 							<Divider style={styles.divider} />
 							<StatRow
-								label="Resists this week"
-								value={String(weeklyStats.resistCount)}
+								label="Meditations this week"
+								value={String(weeklyStats.meditationCount)}
 								valueColor={
-									weeklyStats.resistCount > 0 ? colors.secondary : colors.muted
+									weeklyStats.meditationCount > 0 ? colors.secondary : colors.muted
 								}
 							/>
 							<Divider style={styles.divider} />

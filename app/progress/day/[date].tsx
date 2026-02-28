@@ -79,8 +79,8 @@ export default function DayDetailScreen(): React.ReactElement {
 	}
 
 	function outcomeLabel(outcome: UrgeEvent["outcome"]): string {
-		if (outcome === "success") return "Resisted";
-		if (outcome === "fail") return "Did not resist";
+		if (outcome === "success") return "Meditated";
+		if (outcome === "fail") return "Did not meditate";
 		return "Ongoing";
 	}
 
@@ -129,12 +129,12 @@ export default function DayDetailScreen(): React.ReactElement {
 					<View style={styles.summaryRow}>
 						<SummaryBadge
 							count={successCount}
-							label="Resisted"
+							label="Meditated"
 							color={colors.success}
 						/>
 						<SummaryBadge
 							count={failCount}
-							label="Did not resist"
+							label="Did not meditate"
 							color="#E05A5A"
 						/>
 						<SummaryBadge

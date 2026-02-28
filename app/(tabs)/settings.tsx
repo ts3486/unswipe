@@ -23,7 +23,7 @@ import { Divider, List, Text } from "react-native-paper";
 // ---------------------------------------------------------------------------
 
 export default function SettingsScreen(): React.ReactElement {
-	const { userProfile, refreshProfile, refreshPremiumStatus } = useAppState();
+	const { userProfile, refreshProfile, refreshPremiumStatus, trialInfo } = useAppState();
 	const { db } = useDatabaseContext();
 
 	const [notifStyle, setNotifStyle] = useState<NotificationStyle>(
@@ -39,7 +39,7 @@ export default function SettingsScreen(): React.ReactElement {
 		if (userProfile === null || isUpdating) {
 			return;
 		}
-		const cycle: NotificationStyle[] = ["normal", "stealth", "off"];
+		const cycle: NotificationStyle[] = ["normal", "off"];
 		const currentIdx = cycle.indexOf(notifStyle);
 		const next = cycle[(currentIdx + 1) % cycle.length] as NotificationStyle;
 		setNotifStyle(next);
@@ -65,8 +65,7 @@ export default function SettingsScreen(): React.ReactElement {
 	}, [db, userProfile, refreshProfile, notifStyle, isUpdating]);
 
 	const notifLabel: Record<NotificationStyle, string> = {
-		normal: "Normal",
-		stealth: "Stealth",
+		normal: "On",
 		off: "Off",
 	};
 
@@ -154,16 +153,34 @@ export default function SettingsScreen(): React.ReactElement {
 				Plan
 			</Text>
 			<View style={styles.listCard}>
-				<List.Item
-					title="Unmatch Unlocked"
-					description="You have full access. Thank you!"
-					titleStyle={styles.listTitle}
-					descriptionStyle={styles.listDesc}
-					accessibilityLabel="Unmatch is unlocked — you have full access"
-					left={() => (
-						<List.Icon icon="check-circle-outline" color={colors.success} />
-					)}
-				/>
+				{trialInfo.isTrialActive ? (
+					<List.Item
+						title="Free Trial"
+						description={`${trialInfo.trialDaysRemaining} day${trialInfo.trialDaysRemaining === 1 ? '' : 's'} remaining — tap to subscribe`}
+						titleStyle={styles.listTitle}
+						descriptionStyle={styles.listDesc}
+						accessibilityLabel={`Free trial — ${trialInfo.trialDaysRemaining} days remaining. Tap to subscribe.`}
+						accessibilityRole="button"
+						onPress={() => { router.push("/paywall"); }}
+						left={() => (
+							<List.Icon icon="clock-outline" color={colors.warning} />
+						)}
+						right={({ color }) => (
+							<List.Icon icon="chevron-right" color={color} />
+						)}
+					/>
+				) : (
+					<List.Item
+						title="Unmatch Unlocked"
+						description="You have full access. Thank you!"
+						titleStyle={styles.listTitle}
+						descriptionStyle={styles.listDesc}
+						accessibilityLabel="Unmatch is unlocked — you have full access"
+						left={() => (
+							<List.Icon icon="check-circle-outline" color={colors.success} />
+						)}
+					/>
+				)}
 			</View>
 
 			{/* Dev-only tools — __DEV__ is false in production builds, so the

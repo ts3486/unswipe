@@ -4,7 +4,7 @@
 
 import {
 	LIFE_TREE_CAP,
-	LIFE_TREE_RESISTS_PER_LEVEL,
+	LIFE_TREE_MEDITATION_PER_LEVEL,
 } from "@/src/constants/config";
 import { colors } from "@/src/constants/theme";
 import type React from "react";
@@ -17,7 +17,7 @@ import { Surface, Text } from "react-native-paper";
 
 interface LifeTreeCompactProps {
 	level: number;
-	resistCount: number;
+	meditationCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -26,10 +26,10 @@ interface LifeTreeCompactProps {
 
 export function LifeTreeCompact({
 	level,
-	resistCount,
+	meditationCount,
 }: LifeTreeCompactProps): React.ReactElement {
 	const isMaxLevel = level >= LIFE_TREE_CAP;
-	const resistsIntoCurrentLevel = resistCount % LIFE_TREE_RESISTS_PER_LEVEL;
+	const meditationsIntoCurrentLevel = meditationCount % LIFE_TREE_MEDITATION_PER_LEVEL;
 
 	return (
 		<Surface style={styles.card} elevation={2}>
@@ -42,7 +42,7 @@ export function LifeTreeCompact({
 			<Text variant="labelSmall" style={styles.progress}>
 				{isMaxLevel
 					? "Max"
-					: `${resistsIntoCurrentLevel}/${LIFE_TREE_RESISTS_PER_LEVEL}`}
+					: `${meditationsIntoCurrentLevel}/${LIFE_TREE_MEDITATION_PER_LEVEL}`}
 			</Text>
 		</Surface>
 	);

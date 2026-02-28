@@ -158,6 +158,14 @@ describe('NoopAnalyticsAdapter', () => {
     expect(() => adapter.track(event)).not.toThrow();
   });
 
+  it('track() does not throw for trial_started', () => {
+    const event: AnalyticsEvent = {
+      name: 'trial_started',
+      props: {},
+    };
+    expect(() => adapter.track(event)).not.toThrow();
+  });
+
   it('setUserId() does not throw', () => {
     expect(() => adapter.setUserId('user-123')).not.toThrow();
   });

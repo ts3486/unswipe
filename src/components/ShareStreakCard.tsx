@@ -21,10 +21,10 @@ const logoSource = require("@/assets/images/logo.png") as number;
 export interface ShareStreakCardProps {
 	/** Current streak in days. */
 	streak: number;
-	/** Total urges resisted all-time. */
-	resistCount: number;
-	/** Resist rank (1–30). */
-	resistRank: number;
+	/** Total meditations completed all-time. */
+	meditationCount: number;
+	/** Meditation rank (1–30). */
+	meditationRank: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,8 +38,8 @@ export interface ShareStreakCardProps {
  */
 export function ShareStreakCard({
 	streak,
-	resistCount,
-	resistRank,
+	meditationCount,
+	meditationRank,
 }: ShareStreakCardProps): React.ReactElement {
 	const streakLabel = streak === 1 ? "1 day" : `${streak} days`;
 
@@ -70,13 +70,13 @@ export function ShareStreakCard({
 			{/* Stats row */}
 			<View style={styles.statsRow}>
 				<View style={styles.statBlock}>
-					<Text style={styles.statValue}>{resistCount}</Text>
-					<Text style={styles.statLabel}>urges resisted</Text>
+					<Text style={styles.statValue}>{meditationCount}</Text>
+					<Text style={styles.statLabel}>meditations completed</Text>
 				</View>
 				<View style={styles.statDivider} />
 				<View style={styles.statBlock}>
-					<Text style={styles.statValue}>Rank {resistRank}</Text>
-					<Text style={styles.statLabel}>resist rank</Text>
+					<Text style={styles.statValue}>Rank {meditationRank}</Text>
+					<Text style={styles.statLabel}>meditation rank</Text>
 				</View>
 			</View>
 

@@ -2,21 +2,21 @@
 // No default exports.
 
 // ---------------------------------------------------------------------------
-// Resist Rank (LOCKED)
+// Meditation Rank (LOCKED)
 // ---------------------------------------------------------------------------
 
 /** Starting rank for every new user. */
-export const RESIST_RANK_START = 1 as const;
+export const MEDITATION_RANK_START = 1 as const;
 
 /** Maximum rank a user can reach. */
-export const RESIST_RANK_CAP = 30 as const;
+export const MEDITATION_RANK_CAP = 30 as const;
 
-/** Number of successful resists required to advance one rank. */
-export const RESIST_RANK_RESISTS_PER_LEVEL = 5 as const;
+/** Number of successful meditations required to advance one rank. */
+export const MEDITATION_RANK_PER_LEVEL = 5 as const;
 
-// Life Tree uses the same progression constants as Resist Rank.
-export const LIFE_TREE_CAP = RESIST_RANK_CAP;
-export const LIFE_TREE_RESISTS_PER_LEVEL = RESIST_RANK_RESISTS_PER_LEVEL;
+// Life Tree uses the same progression constants as Meditation Rank.
+export const LIFE_TREE_CAP = MEDITATION_RANK_CAP;
+export const LIFE_TREE_MEDITATION_PER_LEVEL = MEDITATION_RANK_PER_LEVEL;
 
 // ---------------------------------------------------------------------------
 // Breathing exercise timings (seconds)
@@ -39,10 +39,10 @@ export const BREATHING_EXHALE = 6 as const;
 // ---------------------------------------------------------------------------
 
 /**
- * Estimated minutes saved per successful resist.
+ * Estimated minutes saved per successful meditation.
  * Based on the average time spent per dating app session.
  */
-export const TIME_SAVED_PER_RESIST_MINUTES = 12 as const;
+export const TIME_SAVED_PER_MEDITATION_MINUTES = 12 as const;
 
 // ---------------------------------------------------------------------------
 // RevenueCat IAP
@@ -56,3 +56,10 @@ export const REVENUECAT_API_KEY_ANDROID = "TODO_REPLACE_WITH_ANDROID_KEY";
 
 /** RevenueCat entitlement identifier that gates premium features. */
 export const RC_ENTITLEMENT_ID = "premium";
+
+// ---------------------------------------------------------------------------
+// Free Trial
+// ---------------------------------------------------------------------------
+
+/** Number of days the free trial lasts after onboarding. */
+export const FREE_TRIAL_DAYS = 7 as const;

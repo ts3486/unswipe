@@ -1,8 +1,8 @@
-// TimeSavedCard — displays estimated time saved this week based on resist count.
-// Logic: each successful resist = TIME_SAVED_PER_RESIST_MINUTES minutes saved.
+// TimeSavedCard — displays estimated time saved this week based on meditation count.
+// Logic: each successful meditation = TIME_SAVED_PER_MEDITATION_MINUTES minutes saved.
 // Uses react-native-paper components. TypeScript strict mode.
 
-import { TIME_SAVED_PER_RESIST_MINUTES } from "@/src/constants/config";
+import { TIME_SAVED_PER_MEDITATION_MINUTES } from "@/src/constants/config";
 import { colors } from "@/src/constants/theme";
 import type React from "react";
 import { StyleSheet, View } from "react-native";
@@ -17,7 +17,7 @@ import { Surface, Text } from "react-native-paper";
  * Shows minutes when under 60, hours (1 decimal place) otherwise.
  */
 export function formatTimeSaved(weeklySuccessCount: number): string {
-	const mins = weeklySuccessCount * TIME_SAVED_PER_RESIST_MINUTES;
+	const mins = weeklySuccessCount * TIME_SAVED_PER_MEDITATION_MINUTES;
 	if (mins === 0) return "0 min";
 	if (mins < 60) return `~${mins} min`;
 	return `~${(mins / 60).toFixed(1)} hrs`;
@@ -43,7 +43,7 @@ export function TimeSavedCard({
 	weeklySuccessCount,
 }: TimeSavedCardProps): React.ReactElement {
 	const formatted = formatTimeSaved(weeklySuccessCount);
-	const mins = weeklySuccessCount * TIME_SAVED_PER_RESIST_MINUTES;
+	const mins = weeklySuccessCount * TIME_SAVED_PER_MEDITATION_MINUTES;
 
 	return (
 		<Surface style={styles.container} elevation={1}>
@@ -57,13 +57,13 @@ export function TimeSavedCard({
 					</Text>
 					{mins > 0 && (
 						<Text variant="bodySmall" style={styles.sub}>
-							{weeklySuccessCount} resist{weeklySuccessCount === 1 ? "" : "s"}{" "}
+							{weeklySuccessCount} meditation{weeklySuccessCount === 1 ? "" : "s"}{" "}
 							this week
 						</Text>
 					)}
 					{mins === 0 && (
 						<Text variant="bodySmall" style={styles.sub}>
-							Start resisting to track time saved
+							Start meditating to track time saved
 						</Text>
 					)}
 				</View>

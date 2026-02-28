@@ -13,9 +13,9 @@ import {
 } from "@/src/data/repositories";
 import { getCatalog } from "@/src/data/seed-loader";
 import {
-	calculateResistRank,
+	calculateMeditationRank,
 	isDaySuccess,
-	shouldIncrementResist,
+	shouldIncrementMeditation,
 	shouldIncrementSpendAvoided,
 } from "@/src/domain/progress-rules";
 import { calculateStreak } from "@/src/domain/progress-rules";
@@ -54,10 +54,10 @@ interface PanicFlowState {
 	spendItemType: SpendItemType | null;
 	breathingTimeLeft: number;
 	isBreathing: boolean;
-	/** Resist rank after logOutcome; null until complete step. */
-	resistRankAfter: number | null;
-	/** Whether the resist rank leveled up during this session. */
-	resistRankLeveledUp: boolean;
+	/** Meditation rank after logOutcome; null until complete step. */
+	meditationRankAfter: number | null;
+	/** Whether the meditation rank leveled up during this session. */
+	meditationRankLeveledUp: boolean;
 }
 
 interface PanicFlowActions {
@@ -91,8 +91,8 @@ const INITIAL_STATE: PanicFlowState = {
 	spendItemType: null,
 	breathingTimeLeft: BREATHING_DURATION_SECONDS,
 	isBreathing: false,
-	resistRankAfter: null,
-	resistRankLeveledUp: false,
+	meditationRankAfter: null,
+	meditationRankLeveledUp: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -247,12 +247,12 @@ export function usePanicFlow(): UsePanicFlowReturn {
 
 			// Load current totals to build updated progress.
 			const existing = await getLatestProgress(db);
-			const prevResistTotal = existing?.resist_count_total ?? 0;
+			const prevMeditationTotal = existing?.meditation_count_total ?? 0;
 			const prevSpendAvoided = existing?.spend_avoided_count_total ?? 0;
 
-			const newResistTotal = shouldIncrementResist(outcome)
-				? prevResistTotal + 1
-				: prevResistTotal;
+			const newMeditationTotal = shouldIncrementMeditation(outcome)
+				? prevMeditationTotal + 1
+				: prevMeditationTotal;
 
 			const newSpendAvoided = shouldIncrementSpendAvoided(
 				state.urgeKind ?? "check",
@@ -261,9 +261,9 @@ export function usePanicFlow(): UsePanicFlowReturn {
 				? prevSpendAvoided + 1
 				: prevSpendAvoided;
 
-			const prevResistRank = calculateResistRank(prevResistTotal);
-			const newResistRank = calculateResistRank(newResistTotal);
-			const rankLeveledUp = newResistRank > prevResistRank;
+			const prevMeditationRank = calculateMeditationRank(prevMeditationTotal);
+			const newMeditationRank = calculateMeditationRank(newMeditationTotal);
+			const rankLeveledUp = newMeditationRank > prevMeditationRank;
 
 			// Build streak from all success dates.
 			const allDates = await getAllProgressDates(db);
@@ -279,8 +279,8 @@ export function usePanicFlow(): UsePanicFlowReturn {
 			await upsertProgress(db, {
 				date_local: today,
 				streak_current: newStreak,
-				resist_count_total: newResistTotal,
-				tree_level: newResistRank,
+				meditation_count_total: newMeditationTotal,
+				tree_level: newMeditationRank,
 				last_success_date: daySuccess
 					? today
 					: (existing?.last_success_date ?? null),
@@ -292,8 +292,8 @@ export function usePanicFlow(): UsePanicFlowReturn {
 				outcome,
 				triggerTag: triggerTag ?? null,
 				step: "complete",
-				resistRankAfter: newResistRank,
-				resistRankLeveledUp: rankLeveledUp,
+				meditationRankAfter: newMeditationRank,
+				meditationRankLeveledUp: rankLeveledUp,
 			}));
 		},
 		[

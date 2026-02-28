@@ -24,7 +24,7 @@ import { useCallback, useEffect, useState } from "react";
  * @param createdAtIso - ISO-8601 UTC string of when the user was created.
  * @returns 1-based day index, capped at 7 for the 7-day starter course.
  */
-function deriveDayIndex(createdAtIso: string | null): number {
+export function deriveDayIndex(createdAtIso: string | null): number {
 	if (createdAtIso === null) {
 		return 1;
 	}

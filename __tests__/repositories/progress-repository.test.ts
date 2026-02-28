@@ -32,7 +32,7 @@ function makeMockDb(
 const BASE_PROGRESS: Progress = {
 	date_local: "2026-02-18",
 	streak_current: 3,
-	resist_count_total: 10,
+	meditation_count_total: 10,
 	tree_level: 3,
 	last_success_date: "2026-02-18",
 	spend_avoided_count_total: 2,
@@ -76,7 +76,7 @@ describe("getProgress", () => {
 		expect(result).not.toBeNull();
 		expect(result!.date_local).toBe("2026-02-18");
 		expect(result!.streak_current).toBe(5);
-		expect(result!.resist_count_total).toBe(20);
+		expect(result!.meditation_count_total).toBe(20);
 		expect(result!.tree_level).toBe(5);
 		expect(result!.last_success_date).toBe("2026-02-18");
 		expect(result!.spend_avoided_count_total).toBe(3);
@@ -168,7 +168,7 @@ describe("upsertProgress", () => {
 		const params = (db.runAsync as jest.Mock).mock.calls[0][1] as unknown[];
 		expect(params).toContain("2026-02-18");
 		expect(params).toContain(3); // streak_current
-		expect(params).toContain(10); // resist_count_total
+		expect(params).toContain(10); // meditation_count_total
 		expect(params).toContain(3); // tree_level
 		expect(params).toContain(2); // spend_avoided_count_total
 	});
@@ -192,7 +192,7 @@ describe("upsertProgress", () => {
 		await upsertProgress(db, {
 			...BASE_PROGRESS,
 			tree_level: 1,
-			resist_count_total: 0,
+			meditation_count_total: 0,
 		});
 		const params = (db.runAsync as jest.Mock).mock.calls[0][1] as unknown[];
 		expect(params).toContain(1);

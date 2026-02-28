@@ -13,7 +13,7 @@ import React, {
 import type { Progress, UserProfile } from '@/src/domain/types';
 import {
   calculateStreak,
-  calculateResistRank,
+  calculateMeditationRank,
   isDaySuccess,
 } from '@/src/domain/progress-rules';
 import {
@@ -23,7 +23,8 @@ import {
   getLatestProgress,
   getUserProfile,
 } from '@/src/data/repositories';
-import { getIsPremium, recordLifetimePurchase, recordMonthlySubscription } from '@/src/data/repositories/subscription-repository';
+import { getIsPremium, recordLifetimePurchase, recordMonthlySubscription, recordTrialStart, getTrialInfo } from '@/src/data/repositories/subscription-repository';
+import type { TrialInfo } from '@/src/data/repositories/subscription-repository';
 import { getLocalDateString } from '@/src/utils/date';
 import { useDatabaseContext } from './DatabaseContext';
 
@@ -31,16 +32,24 @@ import { useDatabaseContext } from './DatabaseContext';
 // State and action interfaces
 // ---------------------------------------------------------------------------
 
+const DEFAULT_TRIAL_INFO: TrialInfo = {
+  hasStartedTrial: false,
+  isTrialActive: false,
+  trialDaysRemaining: 0,
+  trialEndsAt: '',
+};
+
 interface AppState {
   userProfile: UserProfile | null;
   todayProgress: Progress | null;
   streak: number;
-  resistRank: number;
-  resistCount: number;
+  meditationRank: number;
+  meditationCount: number;
   todaySuccess: boolean;
   isOnboarded: boolean;
   isLoading: boolean;
   isPremium: boolean;
+  trialInfo: TrialInfo;
 }
 
 interface AppStateActions {
@@ -51,6 +60,7 @@ interface AppStateActions {
     profile: Omit<UserProfile, 'id' | 'created_at'>,
   ) => Promise<void>;
   unlockPremium: (productId: string, period: 'monthly' | 'lifetime') => Promise<void>;
+  startTrial: () => Promise<void>;
 }
 
 type AppStateContextValue = AppState & AppStateActions;
@@ -75,11 +85,12 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [todayProgress, setTodayProgress] = useState<Progress | null>(null);
   const [streak, setStreak] = useState<number>(0);
-  const [resistRank, setResistRank] = useState<number>(1);
-  const [resistCount, setResistCount] = useState<number>(0);
+  const [meditationRank, setMeditationRank] = useState<number>(1);
+  const [meditationCount, setMeditationCount] = useState<number>(0);
   const [todaySuccess, setTodaySuccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [trialInfo, setTrialInfo] = useState<TrialInfo>(DEFAULT_TRIAL_INFO);
 
   // ---------------------------------------------------------------------------
   // Data loaders
@@ -93,6 +104,8 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
   const refreshPremium = useCallback(async (): Promise<void> => {
     const premium = await getIsPremium(db);
     setIsPremium(premium);
+    const trial = await getTrialInfo(db);
+    setTrialInfo(trial);
   }, [db]);
 
   const refreshProgress = useCallback(async (): Promise<void> => {
@@ -103,12 +116,12 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     const todayRow = progress?.date_local === today ? progress : null;
     setTodayProgress(todayRow);
 
-    // Determine how many total resists have been accumulated.
-    const totalResists = todayRow?.resist_count_total ?? progress?.resist_count_total ?? 0;
-    setResistCount(totalResists);
+    // Determine how many total meditations have been accumulated.
+    const totalMeditations = todayRow?.meditation_count_total ?? progress?.meditation_count_total ?? 0;
+    setMeditationCount(totalMeditations);
 
-    // Resist rank is derived purely from total resist count.
-    setResistRank(calculateResistRank(totalResists));
+    // Meditation rank is derived purely from total meditation count.
+    setMeditationRank(calculateMeditationRank(totalMeditations));
 
     // Streak: gather all progress dates that were success days.
     const allDates = await getAllProgressDates(db);
@@ -148,6 +161,14 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     [db, refreshPremium],
   );
 
+  const startTrial = useCallback(
+    async (): Promise<void> => {
+      await recordTrialStart(db);
+      await refreshPremium();
+    },
+    [db, refreshPremium],
+  );
+
   // ---------------------------------------------------------------------------
   // Initial load
   // ---------------------------------------------------------------------------
@@ -177,17 +198,19 @@ export function AppStateProvider({ children }: AppStateProviderProps): React.Rea
     userProfile,
     todayProgress,
     streak,
-    resistRank,
-    resistCount,
+    meditationRank,
+    meditationCount,
     todaySuccess,
     isOnboarded: userProfile !== null,
     isLoading,
     isPremium,
+    trialInfo,
     refreshProgress,
     refreshProfile,
     refreshPremiumStatus: refreshPremium,
     completeOnboarding,
     unlockPremium,
+    startTrial,
   };
 
   return (

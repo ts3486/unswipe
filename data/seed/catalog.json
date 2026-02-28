@@ -210,7 +210,7 @@
 		}
 	],
 	"copy": {
-		"panicCta": "Resist",
+		"panicCta": "Meditate",
 		"successTitle": "Nice work.",
 		"successBody": "Small wins add up.",
 		"failTitle": "It’s okay.",
@@ -219,7 +219,7 @@
 	"motivation_messages": [
 		"The average person spends 90 minutes a day on dating apps. That time adds up.",
 		"Boosts are priced to feel small. Over a month, they add up to real money.",
-		"Every urge you resist rewires your brain a little.",
+		"Every time you meditate, you rewire your brain a little.",
 		"Checking for matches releases the same dopamine loop as slot machines.",
 		"One pause today trains your brain for an easier pause tomorrow.",
 		"Swiping feels productive. It usually isn’t.",
@@ -234,7 +234,7 @@
 		"Small consistent choices build bigger changes than big impulsive ones.",
 		"Most matches go nowhere. Most sessions waste time. That’s not your fault.",
 		"Premium features are priced to exploit the fear of missing out.",
-		"Resisting once makes resisting twice easier.",
+		"One meditation makes the next one easier.",
 		"The app wants your attention. You don’t have to give it.",
 		"Time offline is time available for things that actually feel good.",
 		"Opening the app out of boredom is a habit, not a need.",

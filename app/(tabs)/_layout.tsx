@@ -96,7 +96,7 @@ export default function TabsLayout(): React.ReactElement {
           tabBarIcon: ({ size }) => (
             <Animated.View style={{ opacity: pauseOpacity }}>
               <MaterialCommunityIcons
-                name="hand-peace"
+                name="meditation"
                 color={colors.primary}
                 size={size}
               />

@@ -3,33 +3,33 @@
 // No default exports.
 
 import {
-	RESIST_RANK_CAP,
-	RESIST_RANK_RESISTS_PER_LEVEL,
-	RESIST_RANK_START,
+	MEDITATION_RANK_CAP,
+	MEDITATION_RANK_PER_LEVEL,
+	MEDITATION_RANK_START,
 } from "../constants/config";
 import type { UrgeKind, UrgeOutcome } from "./types";
 
 // ---------------------------------------------------------------------------
-// Resist Rank
+// Meditation Rank
 // ---------------------------------------------------------------------------
 
 /**
- * Derive the Resist Rank from the cumulative resist count.
+ * Derive the Meditation Rank from the cumulative meditation count.
  *
- * Formula: floor(resistCountTotal / RESIST_RANK_RESISTS_PER_LEVEL) + RESIST_RANK_START
- * Capped at RESIST_RANK_CAP (30). Rank never decreases.
+ * Formula: floor(meditationCountTotal / MEDITATION_RANK_PER_LEVEL) + MEDITATION_RANK_START
+ * Capped at MEDITATION_RANK_CAP (30). Rank never decreases.
  *
- * @param resistCountTotal - Lifetime count of successful resists (>= 0).
- * @returns Resist rank in the range [1, 30].
+ * @param meditationCountTotal - Lifetime count of successful meditations (>= 0).
+ * @returns Meditation rank in the range [1, 30].
  */
-export function calculateResistRank(resistCountTotal: number): number {
-	if (resistCountTotal < 0) {
-		return RESIST_RANK_START;
+export function calculateMeditationRank(meditationCountTotal: number): number {
+	if (meditationCountTotal < 0) {
+		return MEDITATION_RANK_START;
 	}
 	const computed =
-		Math.floor(resistCountTotal / RESIST_RANK_RESISTS_PER_LEVEL) +
-		RESIST_RANK_START;
-	return Math.min(computed, RESIST_RANK_CAP);
+		Math.floor(meditationCountTotal / MEDITATION_RANK_PER_LEVEL) +
+		MEDITATION_RANK_START;
+	return Math.min(computed, MEDITATION_RANK_CAP);
 }
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ export function calculateResistRank(resistCountTotal: number): number {
 /**
  * Determine whether a given day counts as a success day.
  *
- * A day is a success if the user completed at least one panic resist
+ * A day is a success if the user completed at least one panic meditation
  * OR completed the daily task. Once a day is marked successful, later
  * failures on the same day do not remove the success.
  *
@@ -103,20 +103,20 @@ function subtractOneDay(dateLocal: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Return true only when the outcome is 'success', meaning the resist
+ * Return true only when the outcome is 'success', meaning the meditation
  * count should be incremented.
  *
- * Outcomes 'fail' and 'ongoing' must not increment the resist counter.
+ * Outcomes 'fail' and 'ongoing' must not increment the meditation counter.
  *
  * @param outcome - The recorded outcome of a urge event.
  */
-export function shouldIncrementResist(outcome: UrgeOutcome): boolean {
+export function shouldIncrementMeditation(outcome: UrgeOutcome): boolean {
 	return outcome === "success";
 }
 
 /**
  * Return true only when the urge was a spend urge that was successfully
- * resisted, meaning the spend-avoided counter should be incremented.
+ * meditated on, meaning the spend-avoided counter should be incremented.
  *
  * @param urgeKind - The kind of urge that was recorded.
  * @param outcome  - The recorded outcome of that urge event.

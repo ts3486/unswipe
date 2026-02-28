@@ -1,4 +1,4 @@
-// useWeeklySuccessCount — hook to load the current week's successful resist count.
+// useWeeklySuccessCount — hook to load the current week's successful meditation count.
 // Reads from the urge_event table via getWeeklySuccessCount repository function.
 // No default exports. TypeScript strict mode.
 
@@ -18,10 +18,10 @@ interface UseWeeklySuccessCountResult {
 }
 
 /**
- * Returns the number of successful resists in the current calendar week
+ * Returns the number of successful meditations in the current calendar week
  * (Monday through today, inclusive).
  *
- * Refreshes on mount. Call refresh() to reload after a new resist.
+ * Refreshes on mount. Call refresh() to reload after a new meditation.
  */
 export function useWeeklySuccessCount(): UseWeeklySuccessCountResult {
 	const { db } = useDatabaseContext();

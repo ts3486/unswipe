@@ -46,4 +46,7 @@ export {
   upsertSubscription,
   recordLifetimePurchase,
   recordMonthlySubscription,
+  recordTrialStart,
+  getTrialInfo,
 } from './subscription-repository';
+export type { TrialInfo } from './subscription-repository';

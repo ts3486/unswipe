@@ -7,7 +7,7 @@ import {
 	REVENUECAT_API_KEY_ANDROID,
 	REVENUECAT_API_KEY_IOS,
 } from "@/src/constants/config";
-import { upsertSubscription } from "@/src/data/repositories/subscription-repository";
+import { getSubscription, upsertSubscription } from "@/src/data/repositories/subscription-repository";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
@@ -116,6 +116,10 @@ export async function syncSubscriptionToDb(
 	db: SQLiteDatabase,
 	info: CustomerInfo,
 ): Promise<void> {
+	const existing = await getSubscription(db);
+	const trialStartedAt = existing?.trial_started_at ?? "";
+	const trialEndsAt = existing?.trial_ends_at ?? "";
+
 	const entitlement = info.entitlements.active[RC_ENTITLEMENT_ID];
 
 	if (!entitlement) {
@@ -126,6 +130,8 @@ export async function syncSubscriptionToDb(
 			started_at: "",
 			expires_at: "",
 			is_premium: false,
+			trial_started_at: trialStartedAt,
+			trial_ends_at: trialEndsAt,
 		});
 		return;
 	}
@@ -140,5 +146,7 @@ export async function syncSubscriptionToDb(
 		started_at: new Date().toISOString(),
 		expires_at: entitlement.expirationDate ?? "",
 		is_premium: true,
+		trial_started_at: trialStartedAt,
+		trial_ends_at: trialEndsAt,
 	});
 }

@@ -117,6 +117,10 @@ export type AnalyticsEvent =
 	| {
 			name: "data_deleted";
 			props: Record<string, never>;
+	  }
+	| {
+			name: "trial_started";
+			props: Record<string, never>;
 	  };
 
 // ---------------------------------------------------------------------------

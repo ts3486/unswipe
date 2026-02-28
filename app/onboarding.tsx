@@ -5,6 +5,12 @@
 import { BreathingExercise } from "@/src/components/BreathingExercise";
 import { Logo } from "@/src/components/Logo";
 import {
+	FATIGUE_LABELS,
+	MOOD_LABELS,
+	RatingChips,
+	URGE_LABELS,
+} from "@/src/components/RatingChips";
+import {
 	BREATHING_EXHALE,
 	BREATHING_HOLD,
 	BREATHING_INHALE,
@@ -33,7 +39,9 @@ import {
 } from "react-native";
 import {
 	Button,
+	Card,
 	Chip,
+	Divider,
 	SegmentedButtons,
 	Surface,
 	Text,
@@ -62,7 +70,7 @@ interface GoalOption {
 }
 
 const GOAL_AFFIRMATIONS: Record<GoalType, string> = {
-	reduce_swipe: "Small moments of stillness add up.",
+	reduce_swipe: "Small wins add up.",
 	reduce_open: "Less checking, more living.",
 	reduce_night_check: "Sleep is self-care.",
 	reduce_spend: "Your wallet will thank you.",
@@ -163,6 +171,13 @@ export default function OnboardingScreen(): React.ReactElement {
 		DEMO_BREATHING_SECONDS,
 	);
 	const demoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	// Checkin demo state
+	const [demoMood, setDemoMood] = useState<number>(0);
+	const [demoFatigue, setDemoFatigue] = useState<number>(0);
+	const [demoUrge, setDemoUrge] = useState<number>(0);
+	const [demoOpenedAtNight, setDemoOpenedAtNight] = useState<boolean | null>(null);
+	const [demoSpentToday, setDemoSpentToday] = useState<boolean | null>(null);
 
 	const [selectedGoal, setSelectedGoal] = useState<GoalType>("reduce_swipe");
 	const [selectedTriggerIds, setSelectedTriggerIds] = useState<Set<string>>(
@@ -346,10 +361,10 @@ export default function OnboardingScreen(): React.ReactElement {
 					<Logo markSize={72} layout="vertical" wordmarkColor={colors.text} />
 					<View style={styles.welcomeTextBlock}>
 						<Text variant="displaySmall" style={styles.welcomeTitle}>
-							Something worth protecting
+							Take a pause from dating
 						</Text>
 						<Text variant="bodyLarge" style={styles.welcomeSubtitle}>
-							This app helps you be intentional about dating apps — not remove
+							This app helps you pause from dating apps and be intentional about it — not remove
 							them from your life, just put you back in control.
 						</Text>
 					</View>
@@ -380,7 +395,7 @@ export default function OnboardingScreen(): React.ReactElement {
 					showsVerticalScrollIndicator={false}
 				>
 					<Text variant="headlineMedium" style={styles.stepTitle}>
-						What would feel like a win?
+						What would feel like a win to you?
 					</Text>
 					<View style={styles.goalList}>
 						{GOAL_OPTIONS.map((option) => (
@@ -602,22 +617,21 @@ export default function OnboardingScreen(): React.ReactElement {
 					showsVerticalScrollIndicator={false}
 				>
 					<Text variant="headlineMedium" style={styles.stepTitle}>
-						How should we notify you?
+						Stay on track with notifications
+					</Text>
+					<Text variant="bodyMedium" style={styles.stepSubtitle}>
+						Notifications help you pause, reflect, and stay on track with your dating app goals.
 					</Text>
 
-					{(["stealth", "normal", "off"] as NotificationStyle[]).map(
+					{(["normal", "off"] as NotificationStyle[]).map(
 						(style_) => {
 							const labels: Record<
 								NotificationStyle,
 								{ title: string; desc: string }
 							> = {
-								stealth: {
-									title: "Stealth",
-									desc: "Generic-looking notifications, no app name visible.",
-								},
 								normal: {
-									title: "Normal",
-									desc: "Standard notifications with app context.",
+									title: "On",
+									desc: "Receive reminders, streak alerts, and course updates.",
 								},
 								off: { title: "Off", desc: "No notifications." },
 							};
@@ -706,7 +720,7 @@ export default function OnboardingScreen(): React.ReactElement {
 	}
 
 	// ---------------------------------------------------------------------------
-	// Step: demo — Try your first reset
+	// Step: demo — Try your first meditation session
 	// ---------------------------------------------------------------------------
 
 	if (step === "demo") {
@@ -718,17 +732,16 @@ export default function OnboardingScreen(): React.ReactElement {
 					<View style={styles.centeredContent}>
 						<View style={styles.demoIconContainer}>
 							<MaterialCommunityIcons
-								name="hand-peace"
+								name="meditation"
 								size={64}
 								color={colors.primary}
 							/>
 						</View>
 						<Text variant="headlineMedium" style={styles.demoIntroTitle}>
-							Try your first reset
+							Try the Unmatch experience
 						</Text>
 						<Text variant="bodyLarge" style={styles.demoIntroSubtitle}>
-							The urge is "swipe." We'll guide you through a 60-second breathing
-							reset — the same one that's waiting whenever you need it.
+							Unmatch provides meditation sessions and journaling assistance to help you manage your dating app impulses. Let's try it out together.
 						</Text>
 					</View>
 					<View style={styles.bottomActions}>
@@ -740,7 +753,7 @@ export default function OnboardingScreen(): React.ReactElement {
 							labelStyle={styles.primaryButtonLabel}
 							testID="demo-start-breathing"
 						>
-							Start breathing exercise
+							Start meditation session
 						</Button>
 						<Button
 							mode="text"
@@ -767,7 +780,7 @@ export default function OnboardingScreen(): React.ReactElement {
 					>
 						<View style={styles.demoBreathingHeader}>
 							<Text variant="labelLarge" style={styles.demoBreathingLabel}>
-								DEMO RESET — SWIPE URGE
+								MANAGE THE SWIPE URGE
 							</Text>
 							<Text variant="headlineSmall" style={styles.stepTitle}>
 								Follow the breathing guide
@@ -796,10 +809,10 @@ export default function OnboardingScreen(): React.ReactElement {
 
 		// --- Sub-step: action ---
 		if (demoSubStep === "action") {
-			// Pick the first non-spend action from catalog as the demo action card
-			const demoAction =
-				catalog.actions.find((a) => a.action_type !== "spend") ??
-				catalog.actions[0];
+			// Pick all non-spend actions from catalog for the activity options
+			const demoActions = catalog.actions.filter(
+				(a) => a.action_type !== "spend" && a.action_type !== "boundary",
+			);
 
 			return (
 				<View style={styles.root}>
@@ -813,22 +826,26 @@ export default function OnboardingScreen(): React.ReactElement {
 							One more step
 						</Text>
 						<Text variant="bodyMedium" style={styles.stepSubtitle}>
-							After breathing, pick something to do instead. Here's an example:
+							After breathing, pick something to do instead. Here are your options:
 						</Text>
 
-						{demoAction !== undefined && (
-							<Surface style={styles.demoActionCard} elevation={2}>
-								<Text variant="titleMedium" style={styles.demoActionTitle}>
-									{demoAction.title}
-								</Text>
-								<Text variant="bodySmall" style={styles.demoActionBody}>
-									{demoAction.body}
-								</Text>
-								<Text variant="labelSmall" style={styles.demoActionTime}>
-									{Math.round(demoAction.est_seconds / 60)} min
-								</Text>
-							</Surface>
-						)}
+						<View style={styles.demoActionList}>
+							{demoActions.map((action) => (
+								<Surface key={action.id} style={styles.demoActionCard} elevation={2}>
+									<View style={styles.demoActionHeader}>
+										<Text variant="titleSmall" style={styles.demoActionTitle}>
+											{action.title}
+										</Text>
+										<Text variant="labelSmall" style={styles.demoActionTimeBadge}>
+											{Math.round(action.est_seconds / 60)} min
+										</Text>
+									</View>
+									<Text variant="bodySmall" style={styles.demoActionBody}>
+										{action.body}
+									</Text>
+								</Surface>
+							))}
+						</View>
 
 						<Surface style={styles.demoTagline} elevation={1}>
 							<Text variant="bodyMedium" style={styles.demoTaglineText}>
@@ -856,6 +873,8 @@ export default function OnboardingScreen(): React.ReactElement {
 
 		// --- Sub-step: checkin ---
 		if (demoSubStep === "checkin") {
+			const checkinReady = demoMood > 0 && demoFatigue > 0 && demoUrge > 0;
+
 			return (
 				<View style={styles.root}>
 					<ProgressDots steps={orderedSteps} current="demo" />
@@ -868,44 +887,94 @@ export default function OnboardingScreen(): React.ReactElement {
 							Daily check-in
 						</Text>
 						<Text variant="bodyMedium" style={styles.stepSubtitle}>
-							Each day, a quick private reflection on how you're feeling.
+							Just for you — no right answers.
 						</Text>
 
-						{/* Preview of mood/fatigue/urge rating chips (display-only) */}
-						<Surface style={styles.demoActionCard} elevation={2}>
-							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
-								Mood
-							</Text>
-							<View style={styles.chipGrid}>
-								{[1, 2, 3, 4, 5].map((n) => (
-									<Chip key={`mood-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
-										{n}
-									</Chip>
-								))}
-							</View>
+						<Card style={styles.checkinCard} mode="contained">
+							<Card.Content style={styles.checkinCardContent}>
+								<RatingChips
+									label="Mood"
+									value={demoMood}
+									onChange={setDemoMood}
+									labelMap={MOOD_LABELS}
+									subtitle="How are you feeling right now?"
+								/>
+								<Divider style={styles.checkinDivider} />
+								<RatingChips
+									label="Fatigue"
+									value={demoFatigue}
+									onChange={setDemoFatigue}
+									labelMap={FATIGUE_LABELS}
+								/>
+								<Divider style={styles.checkinDivider} />
+								<RatingChips
+									label="Urge level"
+									value={demoUrge}
+									onChange={setDemoUrge}
+									labelMap={URGE_LABELS}
+								/>
+							</Card.Content>
+						</Card>
 
-							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
-								Fatigue
-							</Text>
-							<View style={styles.chipGrid}>
-								{[1, 2, 3, 4, 5].map((n) => (
-									<Chip key={`fatigue-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
-										{n}
-									</Chip>
-								))}
-							</View>
+						<Card style={styles.checkinCard} mode="contained">
+							<Card.Content style={styles.checkinCardContent}>
+								<View style={styles.checkinYesNoRow}>
+									<Text variant="labelLarge" style={styles.checkinLabel}>
+										Opened a dating app late at night?
+									</Text>
+									<View style={styles.checkinChipRow}>
+										<Chip
+											selected={demoOpenedAtNight === true}
+											onPress={() => { setDemoOpenedAtNight(true); }}
+											style={[styles.checkinToggleChip, demoOpenedAtNight === true && styles.checkinYesSelected]}
+											textStyle={[styles.checkinToggleText, demoOpenedAtNight === true && styles.checkinToggleTextSelected]}
+											compact
+										>
+											Yes
+										</Chip>
+										<Chip
+											selected={demoOpenedAtNight === false}
+											onPress={() => { setDemoOpenedAtNight(false); }}
+											style={[styles.checkinToggleChip, demoOpenedAtNight === false && styles.checkinNoSelected]}
+											textStyle={[styles.checkinToggleText, demoOpenedAtNight === false && styles.checkinToggleTextSelected]}
+											compact
+										>
+											No
+										</Chip>
+									</View>
+								</View>
+								<Divider style={styles.checkinDivider} />
+								<View style={styles.checkinYesNoRow}>
+									<Text variant="labelLarge" style={styles.checkinLabel}>
+										Spent money on dating today?
+									</Text>
+									<View style={styles.checkinChipRow}>
+										<Chip
+											selected={demoSpentToday === true}
+											onPress={() => { setDemoSpentToday(true); }}
+											style={[styles.checkinToggleChip, demoSpentToday === true && styles.checkinYesSelected]}
+											textStyle={[styles.checkinToggleText, demoSpentToday === true && styles.checkinToggleTextSelected]}
+											compact
+										>
+											Yes
+										</Chip>
+										<Chip
+											selected={demoSpentToday === false}
+											onPress={() => { setDemoSpentToday(false); }}
+											style={[styles.checkinToggleChip, demoSpentToday === false && styles.checkinNoSelected]}
+											textStyle={[styles.checkinToggleText, demoSpentToday === false && styles.checkinToggleTextSelected]}
+											compact
+										>
+											No
+										</Chip>
+									</View>
+								</View>
+							</Card.Content>
+						</Card>
 
-							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
-								Urge level
-							</Text>
-							<View style={styles.chipGrid}>
-								{[1, 2, 3, 4, 5].map((n) => (
-									<Chip key={`urge-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
-										{n}
-									</Chip>
-								))}
-							</View>
-						</Surface>
+						<Text variant="bodySmall" style={styles.checkinPrivacyNote}>
+							Check-ins are stored locally and never shared.
+						</Text>
 					</ScrollView>
 					<View style={styles.bottomActions}>
 						<Button
@@ -913,12 +982,13 @@ export default function OnboardingScreen(): React.ReactElement {
 							onPress={() => {
 								setDemoSubStep("nicework");
 							}}
+							disabled={!checkinReady}
 							style={styles.primaryButton}
 							contentStyle={styles.primaryButtonContent}
 							labelStyle={styles.primaryButtonLabel}
 							testID="demo-checkin-continue"
 						>
-							Continue
+							Save my reflection
 						</Button>
 					</View>
 				</View>
@@ -987,7 +1057,7 @@ function DemoNiceWork({
 					Nice work.
 				</Text>
 				<Text variant="bodyLarge" style={styles.niceworkBody}>
-					You just completed a reset and saw your daily check-in. That's the core of Unmatch.
+					You just completed a meditation session and saw your daily check-in. That's the core of Unmatch.
 				</Text>
 				{isSubmitting && (
 					<Text variant="bodySmall" style={styles.niceworkLoading}>
@@ -1221,26 +1291,43 @@ const styles = StyleSheet.create({
 		textTransform: "uppercase",
 		letterSpacing: 1,
 	},
+	// Demo action list
+	demoActionList: {
+		gap: 10,
+	},
 	// Demo action card
 	demoActionCard: {
 		backgroundColor: colors.surface,
 		borderRadius: 14,
 		borderWidth: 1,
 		borderColor: colors.border,
-		padding: 20,
+		padding: 16,
+		gap: 6,
+	},
+	demoActionHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
 		gap: 8,
 	},
 	demoActionTitle: {
 		color: colors.text,
 		fontWeight: "700",
+		flex: 1,
+	},
+	demoActionTimeBadge: {
+		color: colors.primary,
+		backgroundColor: "#0F1D3A",
+		borderRadius: 6,
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		overflow: "hidden",
+		fontSize: 11,
+		fontWeight: "600",
 	},
 	demoActionBody: {
 		color: colors.muted,
 		lineHeight: 20,
-	},
-	demoActionTime: {
-		color: colors.secondary,
-		marginTop: 4,
 	},
 	// Demo tagline
 	demoTagline: {
@@ -1256,21 +1343,58 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		lineHeight: 24,
 	},
-	// Checkin preview
-	checkinPreviewLabel: {
-		color: colors.muted,
-		textTransform: "uppercase",
-		letterSpacing: 0.8,
-		marginTop: 8,
-		marginBottom: 4,
-	},
-	previewChip: {
+	// Checkin interactive flow
+	checkinCard: {
 		backgroundColor: colors.surface,
+		borderRadius: 14,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	checkinCardContent: {
+		paddingVertical: 4,
+		gap: 2,
+	},
+	checkinDivider: {
+		backgroundColor: colors.border,
+	},
+	checkinYesNoRow: {
+		paddingVertical: 12,
+		gap: 10,
+	},
+	checkinLabel: {
+		color: colors.text,
+		fontWeight: "500",
+	},
+	checkinChipRow: {
+		flexDirection: "row",
+		gap: 8,
+		flexWrap: "wrap",
+	},
+	checkinToggleChip: {
+		backgroundColor: colors.background,
 		borderColor: colors.border,
 		borderWidth: 1,
+		minWidth: 44,
 	},
-	previewChipText: {
+	checkinYesSelected: {
+		backgroundColor: "#1A3D2E",
+		borderColor: colors.success,
+	},
+	checkinNoSelected: {
+		backgroundColor: "#1A1220",
+		borderColor: "#E05A5A",
+	},
+	checkinToggleText: {
 		color: colors.muted,
+	},
+	checkinToggleTextSelected: {
+		color: colors.text,
+		fontWeight: "600",
+	},
+	checkinPrivacyNote: {
+		color: colors.muted,
+		textAlign: "center",
+		lineHeight: 18,
 	},
 	// Nice work screen
 	niceworkIconContainer: {

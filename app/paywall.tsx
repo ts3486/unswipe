@@ -1,14 +1,15 @@
-// Paywall screen — hard gate after onboarding.
-// Two tiers: $4.99/month or $29.99 lifetime. Non-dismissable.
+// Paywall screen — two modes: trial offer (post-onboarding) or conversion (trial expired).
+// Monthly only — no lifetime plan. Non-dismissable.
 // TypeScript strict mode.
 
+import { Logo } from "@/src/components/Logo";
 import { colors } from "@/src/constants/theme";
 import { useAnalytics } from "@/src/contexts/AnalyticsContext";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
@@ -16,9 +17,6 @@ import { Button, Text } from "react-native-paper";
 // ---------------------------------------------------------------------------
 
 const PRODUCT_MONTHLY = "unmatch_monthly_499";
-const PRODUCT_LIFETIME = "unmatch_lifetime_2999";
-
-type PlanType = "monthly" | "lifetime";
 
 // ---------------------------------------------------------------------------
 // Data
@@ -43,31 +41,49 @@ const FEATURES: FeatureItem[] = [
 
 export default function PaywallScreen(): React.ReactElement {
 	const analytics = useAnalytics();
-	const { unlockPremium } = useAppState();
+	const { unlockPremium, startTrial, trialInfo } = useAppState();
 
-	const [selectedPlan, setSelectedPlan] = useState<PlanType>("lifetime");
 	const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
 	const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+	const isTrialOffer = !trialInfo.hasStartedTrial;
+	const triggerSource = isTrialOffer ? "trial_offer" : "trial_expired";
 
 	// Fire paywall_viewed on mount.
 	useEffect(() => {
 		analytics.track({
 			name: "paywall_viewed",
-			props: { trigger_source: "hard_gate" },
+			props: { trigger_source: triggerSource },
 		});
-	}, [analytics]);
+	}, [analytics, triggerSource]);
+
+	const handleStartTrial = useCallback(async (): Promise<void> => {
+		setIsPurchasing(true);
+		setFeedbackMessage(null);
+		try {
+			await startTrial();
+			analytics.track({
+				name: "trial_started",
+				props: {},
+			});
+			router.replace("/(tabs)");
+		} catch {
+			setFeedbackMessage("Could not start your free trial. Please try again.");
+		} finally {
+			setIsPurchasing(false);
+		}
+	}, [startTrial, analytics]);
 
 	const handlePurchase = useCallback((): void => {
 		setIsPurchasing(true);
 		setFeedbackMessage(null);
-		const productId = selectedPlan === "lifetime" ? PRODUCT_LIFETIME : PRODUCT_MONTHLY;
 		// Stub: in production this calls StoreKit / RevenueCat.
 		setTimeout(async () => {
 			try {
-				await unlockPremium(productId, selectedPlan);
+				await unlockPremium(PRODUCT_MONTHLY, "monthly");
 				analytics.track({
 					name: "purchase_completed",
-					props: { product_id: productId, period: selectedPlan },
+					props: { product_id: PRODUCT_MONTHLY, period: "monthly" },
 				});
 				router.replace("/(tabs)");
 			} catch {
@@ -78,18 +94,13 @@ export default function PaywallScreen(): React.ReactElement {
 				setIsPurchasing(false);
 			}
 		}, 800);
-	}, [unlockPremium, analytics, selectedPlan]);
+	}, [unlockPremium, analytics]);
 
 	const handleRestore = useCallback((): void => {
 		setFeedbackMessage(
 			"Restore purchases is not available yet in this version.",
 		);
 	}, []);
-
-	const ctaLabel =
-		selectedPlan === "lifetime"
-			? "Get Unmatch — $29.99"
-			: "Subscribe — $4.99/month";
 
 	// ---------------------------------------------------------------------------
 	// Render
@@ -101,10 +112,13 @@ export default function PaywallScreen(): React.ReactElement {
 			contentContainerStyle={styles.content}
 			showsVerticalScrollIndicator={false}
 		>
-			{/* Headline */}
+			{/* Logo + Headline */}
 			<View style={styles.header}>
+				<Logo markSize={48} layout="vertical" />
 				<Text variant="headlineMedium" style={styles.headline}>
-					Take back your time
+					{isTrialOffer
+						? "Pause from dating apps"
+						: "Your free trial has ended"}
 				</Text>
 				<Text variant="bodyLarge" style={styles.subtext}>
 					Everything you need to be intentional about dating apps.
@@ -129,63 +143,82 @@ export default function PaywallScreen(): React.ReactElement {
 				))}
 			</View>
 
-			{/* Plan selector */}
-			<View style={styles.planSelector}>
-				<TouchableOpacity
-					style={[
-						styles.planCard,
-						selectedPlan === "monthly" && styles.planCardSelected,
-					]}
-					onPress={() => { setSelectedPlan("monthly"); }}
-					accessibilityLabel="Monthly plan — $4.99 per month"
-					accessibilityRole="button"
-					accessibilityState={{ selected: selectedPlan === "monthly" }}
-				>
-					<Text variant="titleMedium" style={styles.planPrice}>
+			{/* Price comparison callout */}
+			<View style={styles.priceCompareWrap}>
+				<View style={styles.priceCompareBadge}>
+					<Text style={styles.priceCompareBadgeText}>
+						CHEAPER THAN ONE TINDER BOOST
+					</Text>
+				</View>
+				<View style={styles.priceCompare}>
+					<Text variant="titleMedium" style={styles.priceComparePrice}>
 						$4.99/month
 					</Text>
-					<Text variant="bodySmall" style={styles.planNote}>
-						Cancel anytime
+					<Text variant="bodySmall" style={styles.priceCompareContext}>
+						A single boost costs $5.99 and lasts 30 minutes.{"\n"}
+						Unmatch costs less — and works all month.
 					</Text>
-				</TouchableOpacity>
-
-				<TouchableOpacity
-					style={[
-						styles.planCard,
-						selectedPlan === "lifetime" && styles.planCardSelected,
-					]}
-					onPress={() => { setSelectedPlan("lifetime"); }}
-					accessibilityLabel="Lifetime plan — $29.99 one-time purchase"
-					accessibilityRole="button"
-					accessibilityState={{ selected: selectedPlan === "lifetime" }}
-				>
-					<View style={styles.bestValueBadge}>
-						<Text style={styles.bestValueText}>Best value</Text>
-					</View>
-					<Text variant="titleMedium" style={styles.planPrice}>
-						$29.99
-					</Text>
-					<Text variant="bodySmall" style={styles.planNote}>
-						One-time purchase
-					</Text>
-				</TouchableOpacity>
+				</View>
 			</View>
 
 			{/* CTA */}
-			<Button
-				mode="contained"
-				onPress={handlePurchase}
-				loading={isPurchasing}
-				disabled={isPurchasing}
-				style={styles.ctaButton}
-				contentStyle={styles.ctaButtonContent}
-				labelStyle={styles.ctaButtonLabel}
-				accessibilityLabel={ctaLabel}
-				accessibilityRole="button"
-				accessibilityState={{ disabled: isPurchasing, busy: isPurchasing }}
-			>
-				{ctaLabel}
-			</Button>
+			{isTrialOffer ? (
+				<>
+					<Button
+						mode="contained"
+						onPress={() => { void handleStartTrial(); }}
+						loading={isPurchasing}
+						disabled={isPurchasing}
+						style={styles.ctaButton}
+						contentStyle={styles.ctaButtonContent}
+						labelStyle={styles.ctaButtonLabel}
+						accessibilityLabel="Try 7 Days for Free"
+						accessibilityRole="button"
+						accessibilityState={{ disabled: isPurchasing, busy: isPurchasing }}
+					>
+						Try 7 Days for Free
+					</Button>
+					<Text variant="bodySmall" style={styles.pricingNote}>
+						Then $4.99/month — cheaper than a single boost
+					</Text>
+					<Text variant="bodySmall" style={styles.cancelNote}>
+						Cancel anytime in Settings
+					</Text>
+				</>
+			) : (
+				<>
+					<Button
+						mode="contained"
+						onPress={handlePurchase}
+						loading={isPurchasing}
+						disabled={isPurchasing}
+						style={styles.ctaButton}
+						contentStyle={styles.ctaButtonContent}
+						labelStyle={styles.ctaButtonLabel}
+						accessibilityLabel="Subscribe — $4.99/month"
+						accessibilityRole="button"
+						accessibilityState={{ disabled: isPurchasing, busy: isPurchasing }}
+					>
+						Subscribe — $4.99/month
+					</Button>
+					<Text variant="bodySmall" style={styles.pricingNote}>
+						Cheaper than a single boost. Cancel anytime.
+					</Text>
+
+					{/* Restore link */}
+					<Button
+						mode="text"
+						onPress={handleRestore}
+						textColor={colors.muted}
+						style={styles.restoreButton}
+						labelStyle={styles.restoreLabel}
+						accessibilityLabel="Restore previous purchase"
+						accessibilityRole="button"
+					>
+						Restore purchase
+					</Button>
+				</>
+			)}
 
 			{/* Trust signals */}
 			<View style={styles.trustRow}>
@@ -211,25 +244,10 @@ export default function PaywallScreen(): React.ReactElement {
 				</View>
 			</View>
 
-			{/* Restore link */}
-			<Button
-				mode="text"
-				onPress={handleRestore}
-				textColor={colors.muted}
-				style={styles.restoreButton}
-				labelStyle={styles.restoreLabel}
-				accessibilityLabel="Restore previous purchase"
-				accessibilityRole="button"
-			>
-				Restore purchase
-			</Button>
-
-			{/* Terms — only shown when monthly selected */}
-			{selectedPlan === "monthly" && (
-				<Text variant="bodySmall" style={styles.termsText}>
-					Subscription renews monthly. Cancel anytime.
-				</Text>
-			)}
+			{/* Terms */}
+			<Text variant="bodySmall" style={styles.termsText}>
+				Subscription renews monthly. Cancel anytime.
+			</Text>
 
 			{/* Feedback message */}
 			{feedbackMessage !== null && (
@@ -256,15 +274,15 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		paddingHorizontal: 20,
-		paddingTop: 48,
-		paddingBottom: 40,
-		gap: 18,
+		paddingTop: 40,
+		paddingBottom: 24,
+		gap: 16,
 	},
 	// Header
 	header: {
 		alignItems: "center",
 		gap: 10,
-		paddingBottom: 4,
+		paddingBottom: 2,
 	},
 	headline: {
 		color: colors.text,
@@ -300,47 +318,45 @@ const styles = StyleSheet.create({
 		color: colors.text,
 		flex: 1,
 	},
-	// Plan selector
-	planSelector: {
-		flexDirection: "row",
-		gap: 12,
+	// Price comparison callout
+	priceCompareWrap: {
+		alignItems: "center",
+		marginTop: 2,
 	},
-	planCard: {
-		flex: 1,
+	priceCompareBadge: {
+		backgroundColor: colors.warning,
+		borderRadius: 8,
+		paddingHorizontal: 12,
+		paddingVertical: 4,
+		marginBottom: -14,
+		zIndex: 1,
+	},
+	priceCompareBadgeText: {
+		color: colors.background,
+		fontSize: 11,
+		fontWeight: "800",
+		letterSpacing: 0.8,
+	},
+	priceCompare: {
 		backgroundColor: colors.surface,
 		borderRadius: 14,
-		borderWidth: 2,
-		borderColor: colors.border,
-		paddingVertical: 20,
-		paddingHorizontal: 12,
+		borderWidth: 1,
+		borderColor: colors.warning,
+		paddingTop: 22,
+		paddingBottom: 14,
+		paddingHorizontal: 20,
 		alignItems: "center",
-		gap: 4,
+		alignSelf: "stretch",
+		gap: 6,
 	},
-	planCardSelected: {
-		borderColor: colors.primary,
-		backgroundColor: "#0F1D3A",
-	},
-	planPrice: {
+	priceComparePrice: {
 		color: colors.text,
 		fontWeight: "700",
 	},
-	planNote: {
+	priceCompareContext: {
 		color: colors.muted,
 		textAlign: "center",
-	},
-	bestValueBadge: {
-		backgroundColor: colors.warning,
-		borderRadius: 6,
-		paddingHorizontal: 8,
-		paddingVertical: 2,
-		marginBottom: 4,
-	},
-	bestValueText: {
-		color: colors.background,
-		fontSize: 11,
-		fontWeight: "700",
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
+		lineHeight: 18,
 	},
 	// CTA button
 	ctaButton: {
@@ -355,6 +371,21 @@ const styles = StyleSheet.create({
 		fontWeight: "700",
 		letterSpacing: 0.3,
 		color: "#FFFFFF",
+	},
+	// Pricing note
+	pricingNote: {
+		color: colors.muted,
+		textAlign: "center",
+		fontSize: 13,
+		lineHeight: 18,
+		marginTop: -8,
+	},
+	cancelNote: {
+		color: colors.muted,
+		textAlign: "center",
+		fontSize: 12,
+		lineHeight: 16,
+		marginTop: -10,
 	},
 	// Trust signals
 	trustRow: {
@@ -401,6 +432,6 @@ const styles = StyleSheet.create({
 		lineHeight: 18,
 	},
 	bottomSpacer: {
-		height: 16,
+		height: 8,
 	},
 });

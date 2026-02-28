@@ -83,10 +83,11 @@ This document tracks feature-level requirements, screen specs, and implementatio
 
 ## Services
 - Lock/screen time guidance (no forced lockouts)
-- Local notifications
-  - **[NEW] Smart evening nudge** (9-10pm, if no app open that day)
-  - **[NEW] Streak preservation nudge** (8pm, if 3+ day streak at risk)
-  - **[NEW] Weekly summary** (Sunday evening)
+- Local notifications (style: `normal` | `off` — stealth mode removed)
+  - **[DONE] Smart evening nudge** (9-10pm, if no app open that day)
+  - **[DONE] Streak preservation nudge** (8pm, if 3+ day streak at risk)
+  - **[DONE] Weekly summary** (Sunday evening)
+  - **[DONE] Course unlock notification** (8am daily, days 2–7, if lesson not yet completed)
 - Analytics (no free-text, no spend_amount, no notes)
 - Subscription/paywall (IAP — one-time purchase $6.99)
 - **[NEW] Share service** — generate shareable streak card image via native share sheet
@@ -98,4 +99,5 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Gender-neutral, inclusive language (maintained)
 
 ## Changelog
+- 2026-02-28: Implemented course unlock notification scheduling (8am, days 2–7); removed stealth notification mode; simplified onboarding notification step to On/Off with support text
 - 2026-02-27: Added UI/UX improvement specs (paywall redesign, onboarding demo reset, panic polish, home/progress enhancements, notifications, share, accessibility)

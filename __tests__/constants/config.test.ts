@@ -7,40 +7,40 @@ import {
 	BREATHING_EXHALE,
 	BREATHING_HOLD,
 	BREATHING_INHALE,
-	RESIST_RANK_CAP,
-	RESIST_RANK_RESISTS_PER_LEVEL,
-	RESIST_RANK_START,
+	MEDITATION_RANK_CAP,
+	MEDITATION_RANK_PER_LEVEL,
+	MEDITATION_RANK_START,
 } from "@/src/constants/config";
 
 // ---------------------------------------------------------------------------
-// Resist Rank constants (LOCKED per spec)
+// Meditation Rank constants (LOCKED per spec)
 // ---------------------------------------------------------------------------
 
-describe("Resist Rank constants (LOCKED)", () => {
-	it("RESIST_RANK_START is 1", () => {
-		expect(RESIST_RANK_START).toBe(1);
+describe("Meditation Rank constants (LOCKED)", () => {
+	it("MEDITATION_RANK_START is 1", () => {
+		expect(MEDITATION_RANK_START).toBe(1);
 	});
 
-	it("RESIST_RANK_CAP is 30", () => {
-		expect(RESIST_RANK_CAP).toBe(30);
+	it("MEDITATION_RANK_CAP is 30", () => {
+		expect(MEDITATION_RANK_CAP).toBe(30);
 	});
 
-	it("RESIST_RANK_RESISTS_PER_LEVEL is 5", () => {
-		expect(RESIST_RANK_RESISTS_PER_LEVEL).toBe(5);
+	it("MEDITATION_RANK_PER_LEVEL is 5", () => {
+		expect(MEDITATION_RANK_PER_LEVEL).toBe(5);
 	});
 
-	it("RESIST_RANK_CAP is reachable: (CAP - START) * RESISTS_PER_LEVEL resists = level 30", () => {
-		// At (30 - 1) * 5 = 145 resists the tree hits cap exactly.
-		const resistsToMax =
-			(RESIST_RANK_CAP - RESIST_RANK_START) * RESIST_RANK_RESISTS_PER_LEVEL;
+	it("MEDITATION_RANK_CAP is reachable: (CAP - START) * PER_LEVEL meditations = level 30", () => {
+		// At (30 - 1) * 5 = 145 meditations the tree hits cap exactly.
+		const meditationsToMax =
+			(MEDITATION_RANK_CAP - MEDITATION_RANK_START) * MEDITATION_RANK_PER_LEVEL;
 		const computedLevel =
-			Math.floor(resistsToMax / RESIST_RANK_RESISTS_PER_LEVEL) +
-			RESIST_RANK_START;
-		expect(Math.min(computedLevel, RESIST_RANK_CAP)).toBe(RESIST_RANK_CAP);
+			Math.floor(meditationsToMax / MEDITATION_RANK_PER_LEVEL) +
+			MEDITATION_RANK_START;
+		expect(Math.min(computedLevel, MEDITATION_RANK_CAP)).toBe(MEDITATION_RANK_CAP);
 	});
 
-	it("RESIST_RANK_START < RESIST_RANK_CAP", () => {
-		expect(RESIST_RANK_START).toBeLessThan(RESIST_RANK_CAP);
+	it("MEDITATION_RANK_START < MEDITATION_RANK_CAP", () => {
+		expect(MEDITATION_RANK_START).toBeLessThan(MEDITATION_RANK_CAP);
 	});
 });
 

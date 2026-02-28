@@ -20,9 +20,9 @@ Palette:
 - #0B1220 bg, #121C2E surface, #4C8DFF primary, #7AA7FF secondary,
 - #E6EDF7 text, #A7B3C7 muted, #223049 border, #47C28B success, #F2C14E warning
 
-## Resist Rank (LOCKED)
-- resist rank starts 1
-- +1 every 5 successful resists
+## Meditation Rank (LOCKED)
+- meditation rank starts 1
+- +1 every 5 successful meditations
 - never decreases
 - cap 30
 

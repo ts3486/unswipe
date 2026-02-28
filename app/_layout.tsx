@@ -6,7 +6,7 @@ import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { AppState, type AppStateStatus, LogBox } from "react-native";
 
 // Suppress the LogBox warning overlay in dev builds.
@@ -31,6 +31,7 @@ import {
 } from "@/src/contexts/AnalyticsContext";
 import { AppStateProvider, useAppState } from "@/src/contexts/AppStateContext";
 import { DatabaseProvider } from "@/src/contexts/DatabaseContext";
+import { useContent } from "@/src/hooks/useContent";
 import { rescheduleAll } from "@/src/services/notifications";
 import { PaperProvider } from "react-native-paper";
 
@@ -40,11 +41,24 @@ import { PaperProvider } from "react-native-paper";
 // ---------------------------------------------------------------------------
 
 function InnerLayout(): React.ReactElement {
-	const { userProfile, streak, todaySuccess, resistCount, isOnboarded } =
+	const { userProfile, streak, todaySuccess, meditationCount, isOnboarded } =
 		useAppState();
 	const analytics = useAnalytics();
 	const router = useRouter();
 	const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+	// Course state for notification scheduling.
+	const { allContent, completedIds, currentDayIndex } = useContent(
+		userProfile?.created_at ?? null,
+	);
+	const todayContentCompleted = useMemo(() => {
+		const todayItems = allContent.filter(
+			(c) => c.day_index === currentDayIndex,
+		);
+		return (
+			todayItems.length > 0 && todayItems.every((c) => completedIds.has(c.content_id))
+		);
+	}, [allContent, completedIds, currentDayIndex]);
 
 	useEffect(() => {
 		// Only schedule after onboarding is complete and state is loaded.
@@ -53,7 +67,13 @@ function InnerLayout(): React.ReactElement {
 		}
 
 		// Schedule on mount / every time relevant state changes.
-		void rescheduleAll(userProfile, { streak, todaySuccess, resistCount });
+		void rescheduleAll(userProfile, {
+			streak,
+			todaySuccess,
+			meditationCount,
+			currentDayIndex,
+			todayContentCompleted,
+		});
 
 		// Re-schedule when the app returns to the foreground.
 		const subscription = AppState.addEventListener(
@@ -68,7 +88,9 @@ function InnerLayout(): React.ReactElement {
 					void rescheduleAll(userProfile, {
 						streak,
 						todaySuccess,
-						resistCount,
+						meditationCount,
+						currentDayIndex,
+						todayContentCompleted,
 					});
 				}
 
@@ -79,7 +101,7 @@ function InnerLayout(): React.ReactElement {
 		return () => {
 			subscription.remove();
 		};
-	}, [isOnboarded, userProfile, streak, todaySuccess, resistCount]);
+	}, [isOnboarded, userProfile, streak, todaySuccess, meditationCount, currentDayIndex, todayContentCompleted]);
 
 	// Handle notification taps — track analytics and navigate to the correct screen.
 	useEffect(() => {
@@ -130,7 +152,7 @@ function InnerLayout(): React.ReactElement {
 				<Stack.Screen name="settings/privacy" options={{ title: "Privacy" }} />
 				<Stack.Screen
 					name="progress/day/[date]"
-					options={{ title: "Day Detail" }}
+					options={{ title: "Day Detail", headerBackTitle: "Progress" }}
 				/>
 				<Stack.Screen name="checkin" options={{ title: "Daily Check-in" }} />
 			</Stack>

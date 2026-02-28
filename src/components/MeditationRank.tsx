@@ -1,9 +1,9 @@
-// ResistRank — visual component showing the current resist rank and progress.
+// MeditationRank — visual component showing the current meditation rank and progress.
 // Uses react-native-paper components. No emojis. TypeScript strict mode.
 
 import {
-	RESIST_RANK_CAP,
-	RESIST_RANK_RESISTS_PER_LEVEL,
+	MEDITATION_RANK_CAP,
+	MEDITATION_RANK_PER_LEVEL,
 } from "@/src/constants/config";
 import { colors } from "@/src/constants/theme";
 import type React from "react";
@@ -21,9 +21,9 @@ const AnimatedSurface = Animated.createAnimatedComponent(Surface);
 // Props
 // ---------------------------------------------------------------------------
 
-interface ResistRankProps {
+interface MeditationRankProps {
 	level: number;
-	resistCount: number;
+	meditationCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -31,26 +31,26 @@ interface ResistRankProps {
 // ---------------------------------------------------------------------------
 
 /**
- * Displays the Resist Rank and progress toward the next rank.
+ * Displays the Meditation Rank and progress toward the next rank.
  * At max rank (30) shows a "Max Rank" badge instead of progress bar.
  * Animates with an idle pulse on the container and a ring pop when a new
- * resist is earned.
+ * meditation is earned.
  */
-export function ResistRank({
+export function MeditationRank({
 	level,
-	resistCount,
-}: ResistRankProps): React.ReactElement {
-	const isMaxLevel = level >= RESIST_RANK_CAP;
+	meditationCount,
+}: MeditationRankProps): React.ReactElement {
+	const isMaxLevel = level >= MEDITATION_RANK_CAP;
 
-	// Resists within the current level window (0–4 out of 5).
-	const resistsIntoCurrentLevel = resistCount % RESIST_RANK_RESISTS_PER_LEVEL;
+	// Meditations within the current level window (0–4 out of 5).
+	const meditationsIntoCurrentLevel = meditationCount % MEDITATION_RANK_PER_LEVEL;
 	const progressFraction = isMaxLevel
 		? 1
-		: resistsIntoCurrentLevel / RESIST_RANK_RESISTS_PER_LEVEL;
+		: meditationsIntoCurrentLevel / MEDITATION_RANK_PER_LEVEL;
 
 	// Number of "growth rings" to render (filled vs unfilled).
 	const rings = Array.from(
-		{ length: RESIST_RANK_RESISTS_PER_LEVEL },
+		{ length: MEDITATION_RANK_PER_LEVEL },
 		(_, i) => i,
 	);
 
@@ -80,29 +80,29 @@ export function ResistRank({
 	}, [pulseAnim]);
 
 	// ---------------------------------------------------------------------------
-	// Ring pop animation on new resist
+	// Ring pop animation on new meditation
 	// ---------------------------------------------------------------------------
 
 	// One Animated.Value per ring slot.
 	const ringScales = useRef<Animated.Value[]>(
 		Array.from(
-			{ length: RESIST_RANK_RESISTS_PER_LEVEL },
+			{ length: MEDITATION_RANK_PER_LEVEL },
 			() => new Animated.Value(1),
 		),
 	).current;
 
-	// Track previous resistCount to detect increment.
-	const prevResistCount = useRef<number>(resistCount);
+	// Track previous meditationCount to detect increment.
+	const prevMeditationCount = useRef<number>(meditationCount);
 
 	useEffect(() => {
-		if (resistCount > prevResistCount.current) {
+		if (meditationCount > prevMeditationCount.current) {
 			// The newly-filled ring index within the current level window.
-			// resistsIntoCurrentLevel is already the updated value after increment.
-			const newlyFilledIndex = resistsIntoCurrentLevel - 1;
+			// meditationsIntoCurrentLevel is already the updated value after increment.
+			const newlyFilledIndex = meditationsIntoCurrentLevel - 1;
 			// Guard: only animate a valid ring index.
 			if (
 				newlyFilledIndex >= 0 &&
-				newlyFilledIndex < RESIST_RANK_RESISTS_PER_LEVEL
+				newlyFilledIndex < MEDITATION_RANK_PER_LEVEL
 			) {
 				const scale = ringScales[newlyFilledIndex];
 				if (scale !== undefined) {
@@ -123,8 +123,8 @@ export function ResistRank({
 				}
 			}
 		}
-		prevResistCount.current = resistCount;
-	}, [resistCount, resistsIntoCurrentLevel, ringScales]);
+		prevMeditationCount.current = meditationCount;
+	}, [meditationCount, meditationsIntoCurrentLevel, ringScales]);
 
 	// ---------------------------------------------------------------------------
 	// Render
@@ -135,7 +135,7 @@ export function ResistRank({
 			<Surface style={styles.container} elevation={2}>
 				{/* Title */}
 				<Text variant="titleMedium" style={styles.title}>
-					Your Resist Rank
+					Your Meditation Rank
 				</Text>
 
 				{/* Level header */}
@@ -150,7 +150,7 @@ export function ResistRank({
 						<Text variant="bodySmall" style={styles.sublabel}>
 							{isMaxLevel
 								? "Maximum rank reached"
-								: `Rank ${level} of ${RESIST_RANK_CAP}`}
+								: `Rank ${level} of ${MEDITATION_RANK_CAP}`}
 						</Text>
 					</View>
 
@@ -161,7 +161,7 @@ export function ResistRank({
 								key={i}
 								style={[
 									styles.ring,
-									i < resistsIntoCurrentLevel
+									i < meditationsIntoCurrentLevel
 										? styles.ringFilled
 										: styles.ringEmpty,
 									{
@@ -175,7 +175,7 @@ export function ResistRank({
 						<Text variant="labelSmall" style={styles.ringsLabel}>
 							{isMaxLevel
 								? "Max"
-								: `${resistsIntoCurrentLevel} / ${RESIST_RANK_RESISTS_PER_LEVEL}`}
+								: `${meditationsIntoCurrentLevel} / ${MEDITATION_RANK_PER_LEVEL}`}
 						</Text>
 					</View>
 				</View>
@@ -189,7 +189,7 @@ export function ResistRank({
 					/>
 					{!isMaxLevel && (
 						<Text variant="labelSmall" style={styles.progressLabel}>
-							{RESIST_RANK_RESISTS_PER_LEVEL - resistsIntoCurrentLevel} more to
+							{MEDITATION_RANK_PER_LEVEL - meditationsIntoCurrentLevel} more to
 							Rank {level + 1}
 						</Text>
 					)}

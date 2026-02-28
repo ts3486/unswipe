@@ -84,15 +84,18 @@ describe("syncSubscriptionToDb", () => {
 
 		await syncSubscriptionToDb(db as never, info);
 
+		// First call is getFirstAsync (reading existing), second is runAsync (upsert)
 		expect(db.runAsync).toHaveBeenCalledTimes(1);
 		const params = db._calls[0];
-		// params: [id, status, product_id, period, started_at, expires_at, is_premium]
+		// params: [id, status, product_id, period, started_at, expires_at, is_premium, trial_started_at, trial_ends_at]
 		expect(params[0]).toBe("singleton");
 		expect(params[1]).toBe("active"); // status
 		expect(params[2]).toBe("unmatch_monthly_499"); // product_id
 		expect(params[3]).toBe("monthly"); // period
 		expect(params[5]).toBe("2099-06-01T00:00:00Z"); // expires_at
 		expect(params[6]).toBe(1); // is_premium
+		expect(params[7]).toBe(""); // trial_started_at preserved (empty)
+		expect(params[8]).toBe(""); // trial_ends_at preserved (empty)
 	});
 
 	it("writes lifetime purchase", async () => {
@@ -120,6 +123,32 @@ describe("syncSubscriptionToDb", () => {
 		expect(params[2]).toBe("");
 		expect(params[3]).toBe("lifetime"); // default period
 		expect(params[6]).toBe(0); // is_premium = false
+	});
+
+	it("preserves trial fields from existing subscription", async () => {
+		const info = makePremiumCustomerInfo(
+			"unmatch_monthly_499",
+			"2099-06-01T00:00:00Z",
+		);
+		const db = createMockDb();
+		// Simulate existing row with trial fields
+		(db.getFirstAsync as jest.Mock).mockResolvedValue({
+			id: "singleton",
+			status: "trial",
+			product_id: "",
+			period: "monthly",
+			started_at: "2025-01-01T00:00:00Z",
+			expires_at: "",
+			is_premium: 1,
+			trial_started_at: "2025-01-01T00:00:00Z",
+			trial_ends_at: "2025-01-08T00:00:00Z",
+		});
+
+		await syncSubscriptionToDb(db as never, info);
+
+		const params = db._calls[0];
+		expect(params[7]).toBe("2025-01-01T00:00:00Z"); // trial_started_at preserved
+		expect(params[8]).toBe("2025-01-08T00:00:00Z"); // trial_ends_at preserved
 	});
 });
 

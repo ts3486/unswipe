@@ -5,10 +5,12 @@
 import type { NotificationStyle } from "@/src/domain/types";
 import type { NotificationContent } from "@/src/services/notifications";
 import {
+	buildCourseUnlockContent,
 	buildEveningNudgeContent,
 	buildStreakNudgeContent,
 	buildWeeklySummaryContent,
 	getEveningTriggerHour,
+	shouldSendCourseUnlock,
 	shouldSendEveningNudge,
 	shouldSendStreakNudge,
 } from "@/src/services/notifications";
@@ -34,27 +36,9 @@ describe("buildEveningNudgeContent", () => {
 		expect(content.body).toBe("Open Unmatch for a 60-second reset.");
 	});
 
-	it('returns stealth message when style is "stealth"', () => {
-		const content = requireContent(buildEveningNudgeContent("stealth"));
-		expect(content.title).toBe("Take a moment for yourself");
-		expect(content.body).toBe("");
-	});
-
 	it('returns null when style is "off"', () => {
 		const content = buildEveningNudgeContent("off");
 		expect(content).toBeNull();
-	});
-
-	it("stealth title does not contain app name", () => {
-		const content = requireContent(buildEveningNudgeContent("stealth"));
-		expect(content.title.toLowerCase()).not.toContain("unmatch");
-		expect(content.body.toLowerCase()).not.toContain("unmatch");
-	});
-
-	it("stealth body does not mention dating apps", () => {
-		const content = requireContent(buildEveningNudgeContent("stealth"));
-		expect(content.body.toLowerCase()).not.toContain("dating");
-		expect(content.body.toLowerCase()).not.toContain("swipe");
 	});
 });
 
@@ -63,30 +47,34 @@ describe("buildEveningNudgeContent", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildStreakNudgeContent", () => {
-	it("returns streak message for 3 days", () => {
-		const content = requireContent(buildStreakNudgeContent(3));
+	it("returns streak message for 3 days (normal)", () => {
+		const content = requireContent(buildStreakNudgeContent(3, "normal"));
 		expect(content.title).toContain("3");
 		expect(content.body).toContain("alive");
 	});
 
-	it("returns streak message for 7 days", () => {
-		const content = requireContent(buildStreakNudgeContent(7));
+	it("returns streak message for 7 days (normal)", () => {
+		const content = requireContent(buildStreakNudgeContent(7, "normal"));
 		expect(content.title).toContain("7");
 	});
 
-	it("includes the exact streak count in the title", () => {
-		const content = requireContent(buildStreakNudgeContent(14));
+	it("includes the exact streak count in the title (normal)", () => {
+		const content = requireContent(buildStreakNudgeContent(14, "normal"));
 		expect(content.title).toContain("14");
 	});
 
 	it("returns null for streak below 3", () => {
-		expect(buildStreakNudgeContent(0)).toBeNull();
-		expect(buildStreakNudgeContent(1)).toBeNull();
-		expect(buildStreakNudgeContent(2)).toBeNull();
+		expect(buildStreakNudgeContent(0, "normal")).toBeNull();
+		expect(buildStreakNudgeContent(1, "normal")).toBeNull();
+		expect(buildStreakNudgeContent(2, "normal")).toBeNull();
 	});
 
 	it("returns content for streak exactly 3", () => {
-		expect(buildStreakNudgeContent(3)).not.toBeNull();
+		expect(buildStreakNudgeContent(3, "normal")).not.toBeNull();
+	});
+
+	it("returns null when style is off", () => {
+		expect(buildStreakNudgeContent(5, "off")).toBeNull();
 	});
 });
 
@@ -95,26 +83,54 @@ describe("buildStreakNudgeContent", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildWeeklySummaryContent", () => {
-	it("returns content with resist count", () => {
-		const content = buildWeeklySummaryContent(5, 30);
+	it("returns content with meditation count (normal)", () => {
+		const content = requireContent(buildWeeklySummaryContent(5, 30, "normal"));
 		expect(content.title).toBeDefined();
 		expect(content.body).toContain("5");
 		expect(content.body).toContain("30");
 	});
 
-	it("returns content for zero resists", () => {
-		const content = buildWeeklySummaryContent(0, 0);
+	it("returns content for zero meditations (normal)", () => {
+		const content = requireContent(buildWeeklySummaryContent(0, 0, "normal"));
 		expect(content.body).toContain("0");
 	});
 
-	it("includes a call to action mentioning progress", () => {
-		const content = buildWeeklySummaryContent(3, 15);
+	it("includes a call to action mentioning progress (normal)", () => {
+		const content = requireContent(buildWeeklySummaryContent(3, 15, "normal"));
 		expect(content.body.toLowerCase()).toContain("progress");
 	});
 
-	it("includes minutes saved in body", () => {
-		const content = buildWeeklySummaryContent(10, 60);
+	it("includes minutes saved in body (normal)", () => {
+		const content = requireContent(buildWeeklySummaryContent(10, 60, "normal"));
 		expect(content.body).toContain("60");
+	});
+
+	it("returns null when style is off", () => {
+		expect(buildWeeklySummaryContent(5, 30, "off")).toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// buildCourseUnlockContent
+// ---------------------------------------------------------------------------
+
+describe("buildCourseUnlockContent", () => {
+	it('returns message when style is "normal"', () => {
+		const content = requireContent(buildCourseUnlockContent("normal"));
+		expect(content.title).toBeDefined();
+		expect(content.body).toBeDefined();
+	});
+
+	it('returns null when style is "off"', () => {
+		expect(buildCourseUnlockContent("off")).toBeNull();
+	});
+
+	it('normal content mentions "lesson" or "course"', () => {
+		const content = requireContent(buildCourseUnlockContent("normal"));
+		const combined = `${content.title} ${content.body}`.toLowerCase();
+		expect(
+			combined.includes("lesson") || combined.includes("course"),
+		).toBe(true);
 	});
 });
 
@@ -127,10 +143,6 @@ describe("shouldSendEveningNudge", () => {
 		expect(shouldSendEveningNudge("normal", false)).toBe(true);
 	});
 
-	it("returns true when style is stealth and user has NOT opened today", () => {
-		expect(shouldSendEveningNudge("stealth", false)).toBe(true);
-	});
-
 	it("returns false when style is off, regardless of hasOpenedToday", () => {
 		expect(shouldSendEveningNudge("off", false)).toBe(false);
 		expect(shouldSendEveningNudge("off", true)).toBe(false);
@@ -138,10 +150,6 @@ describe("shouldSendEveningNudge", () => {
 
 	it("returns false when user HAS opened today (normal style)", () => {
 		expect(shouldSendEveningNudge("normal", true)).toBe(false);
-	});
-
-	it("returns false when user HAS opened today (stealth style)", () => {
-		expect(shouldSendEveningNudge("stealth", true)).toBe(false);
 	});
 });
 
@@ -166,6 +174,33 @@ describe("shouldSendStreakNudge", () => {
 
 	it("returns false when streak >= 3 but todaySuccess is true", () => {
 		expect(shouldSendStreakNudge(3, true)).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// shouldSendCourseUnlock
+// ---------------------------------------------------------------------------
+
+describe("shouldSendCourseUnlock", () => {
+	it("returns false for currentDayIndex <= 1", () => {
+		expect(shouldSendCourseUnlock(0, false)).toBe(false);
+		expect(shouldSendCourseUnlock(1, false)).toBe(false);
+	});
+
+	it("returns true for days 2–7 when not completed", () => {
+		expect(shouldSendCourseUnlock(2, false)).toBe(true);
+		expect(shouldSendCourseUnlock(4, false)).toBe(true);
+		expect(shouldSendCourseUnlock(7, false)).toBe(true);
+	});
+
+	it("returns false when todayContentCompleted is true", () => {
+		expect(shouldSendCourseUnlock(3, true)).toBe(false);
+		expect(shouldSendCourseUnlock(7, true)).toBe(false);
+	});
+
+	it("returns false for currentDayIndex > 7", () => {
+		expect(shouldSendCourseUnlock(8, false)).toBe(false);
+		expect(shouldSendCourseUnlock(100, false)).toBe(false);
 	});
 });
 
