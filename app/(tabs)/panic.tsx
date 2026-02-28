@@ -35,7 +35,12 @@ import ViewShot from "react-native-view-shot";
 
 export default function PanicScreen(): React.ReactElement {
 	const flow = usePanicFlow();
-	const { refreshProgress, streak, resistCount, resistRank } = useAppState();
+	const {
+		refreshProgress,
+		streak,
+		resistCount,
+		resistRank,
+	} = useAppState();
 	const analytics = useAnalytics();
 	const catalog = getCatalog();
 	const prevStepRef = useRef(flow.step);

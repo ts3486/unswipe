@@ -2,7 +2,7 @@
 // Opens the database using expo-sqlite v16 API and runs all table creation SQL.
 // No default exports. TypeScript strict mode.
 
-import * as SQLite from "expo-sqlite";
+import * as SQLite from 'expo-sqlite';
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -98,19 +98,24 @@ const MIGRATE_SUBSCRIPTION_IS_PREMIUM = `
 ALTER TABLE subscription_state ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0;
 `.trim();
 
+// Migration: upgrade existing one_time purchasers to lifetime.
+const MIGRATE_ONE_TIME_TO_LIFETIME = `
+UPDATE subscription_state SET status = 'lifetime', period = 'lifetime' WHERE status = 'one_time';
+`.trim();
+
 /**
  * Opens the database, enables WAL mode, and creates all tables.
  * Must be called once at app startup before any repository is used.
  * Returns the initialized SQLiteDatabase instance.
  */
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
-	const db = await SQLite.openDatabaseAsync("app.db");
+  const db = await SQLite.openDatabaseAsync('app.db');
 
-	// Enable WAL mode for better write concurrency.
-	await db.execAsync("PRAGMA journal_mode = WAL;");
+  // Enable WAL mode for better write concurrency.
+  await db.execAsync('PRAGMA journal_mode = WAL;');
 
-	// Create all tables in a single transaction.
-	await db.execAsync(`
+  // Create all tables in a single transaction.
+  await db.execAsync(`
     ${CREATE_USER_PROFILE}
     ${CREATE_DAILY_CHECKIN}
     ${CREATE_URGE_EVENT}
@@ -120,26 +125,20 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     ${CREATE_SUBSCRIPTION_STATE}
   `);
 
-	// Run additive migrations that are safe to run multiple times.
-	// ALTER TABLE ... ADD COLUMN fails silently if column already exists on older SQLite,
-	// but expo-sqlite wraps errors — so we catch and ignore duplicate column errors.
-	try {
-		await db.execAsync(MIGRATE_SUBSCRIPTION_IS_PREMIUM);
-	} catch {
-		// Column already exists — safe to ignore.
-	}
+  // Run additive migrations that are safe to run multiple times.
+  // ALTER TABLE ... ADD COLUMN fails silently if column already exists on older SQLite,
+  // but expo-sqlite wraps errors — so we catch and ignore duplicate column errors.
+  try {
+    await db.execAsync(MIGRATE_SUBSCRIPTION_IS_PREMIUM);
+  } catch {
+    // Column already exists — safe to ignore.
+  }
 
-	// Migrate existing one_time purchases to lifetime.
-	try {
-		await db.execAsync(
-			`UPDATE subscription_state SET status = 'lifetime', period = 'lifetime' WHERE status = 'one_time';`,
-		);
-	} catch {
-		// Table may not have matching rows — safe to ignore.
-	}
+  // Upgrade existing one_time purchasers to lifetime (idempotent).
+  await db.execAsync(MIGRATE_ONE_TIME_TO_LIFETIME);
 
-	_db = db;
-	return db;
+  _db = db;
+  return db;
 }
 
 /**
@@ -147,10 +146,10 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
  * Throws if initDatabase() has not been called yet.
  */
 export function getDatabase(): SQLite.SQLiteDatabase {
-	if (_db === null) {
-		throw new Error(
-			"Database has not been initialized. Call initDatabase() before getDatabase().",
-		);
-	}
-	return _db;
+  if (_db === null) {
+    throw new Error(
+      'Database has not been initialized. Call initDatabase() before getDatabase().',
+    );
+  }
+  return _db;
 }

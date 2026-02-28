@@ -7,11 +7,9 @@ import { useAnalytics } from "@/src/contexts/AnalyticsContext";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import type React from "react";
-import { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Button, Text } from "react-native-paper";
-import type { PurchasesPackage } from "react-native-purchases";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -33,18 +31,9 @@ interface FeatureItem {
 
 const FEATURES: FeatureItem[] = [
 	{ icon: "timer-outline", label: "60-second panic reset — anytime, offline" },
-	{
-		icon: "clipboard-check-outline",
-		label: "Daily check-in — private self-reflection",
-	},
-	{
-		icon: "credit-card-off-outline",
-		label: "Spend delay cards — think before you boost",
-	},
-	{
-		icon: "book-open-variant",
-		label: "7-day starter course — learn the patterns",
-	},
+	{ icon: "clipboard-check-outline", label: "Daily check-in — private self-reflection" },
+	{ icon: "credit-card-off-outline", label: "Spend delay cards — think before you boost" },
+	{ icon: "book-open-variant", label: "7-day starter course — learn the patterns" },
 	{ icon: "chart-line", label: "Progress tracking — streaks, rank, insights" },
 ];
 
@@ -54,22 +43,11 @@ const FEATURES: FeatureItem[] = [
 
 export default function PaywallScreen(): React.ReactElement {
 	const analytics = useAnalytics();
-	const { unlockPremium, isPremium, restorePurchases, offerings } =
-		useAppState();
+	const { unlockPremium } = useAppState();
 
 	const [selectedPlan, setSelectedPlan] = useState<PlanType>("lifetime");
 	const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
-	const [isRestoring, setIsRestoring] = useState<boolean>(false);
 	const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-
-	// Navigate to tabs reactively once isPremium becomes true.
-	// This avoids a race condition where router.replace fires before the
-	// React state update from unlockPremium has re-rendered the tabs layout.
-	useEffect(() => {
-		if (isPremium) {
-			router.replace("/(tabs)");
-		}
-	}, [isPremium]);
 
 	// Fire paywall_viewed on mount.
 	useEffect(() => {
@@ -79,79 +57,39 @@ export default function PaywallScreen(): React.ReactElement {
 		});
 	}, [analytics]);
 
-	function findPackage(planType: PlanType): PurchasesPackage | null {
-		if (!offerings) return null;
-		const id = planType === "lifetime" ? PRODUCT_LIFETIME : PRODUCT_MONTHLY;
-		return (
-			offerings.availablePackages.find(
-				(p: PurchasesPackage) => p.product.identifier === id,
-			) ?? null
-		);
-	}
-
-	async function handlePurchase(): Promise<void> {
-		const pkg = findPackage(selectedPlan);
-		if (!pkg) {
-			setFeedbackMessage("Check your connection and try again.");
-			return;
-		}
-
+	const handlePurchase = useCallback((): void => {
 		setIsPurchasing(true);
 		setFeedbackMessage(null);
-
-		try {
-			await unlockPremium(pkg);
-			const productId =
-				selectedPlan === "lifetime" ? PRODUCT_LIFETIME : PRODUCT_MONTHLY;
-			analytics.track({
-				name: "purchase_completed",
-				props: { product_id: productId, period: selectedPlan },
-			});
-			// Navigation is handled by the useEffect watching isPremium.
-		} catch (error: unknown) {
-			const rcError = error as { userCancelled?: boolean };
-			if (rcError.userCancelled) {
-				// User cancelled — dismiss silently.
-			} else {
+		const productId = selectedPlan === "lifetime" ? PRODUCT_LIFETIME : PRODUCT_MONTHLY;
+		// Stub: in production this calls StoreKit / RevenueCat.
+		setTimeout(async () => {
+			try {
+				await unlockPremium(productId, selectedPlan);
+				analytics.track({
+					name: "purchase_completed",
+					props: { product_id: productId, period: selectedPlan },
+				});
+				router.replace("/(tabs)");
+			} catch {
 				setFeedbackMessage(
 					"Purchase could not be completed. Please try again.",
 				);
+			} finally {
+				setIsPurchasing(false);
 			}
-		} finally {
-			setIsPurchasing(false);
-		}
-	}
+		}, 800);
+	}, [unlockPremium, analytics, selectedPlan]);
 
-	async function handleRestore(): Promise<void> {
-		setIsRestoring(true);
-		setFeedbackMessage(null);
-
-		try {
-			await restorePurchases();
-			// If premium was restored, the useEffect watching isPremium handles navigation.
-			// If not, inform the user.
-			// We check after a microtask to let state propagate.
-			setTimeout(() => {
-				setIsRestoring(false);
-				// isPremium change triggers navigation via the useEffect above.
-				// If we're still here, no purchase was found.
-				setFeedbackMessage("No previous purchase found.");
-			}, 300);
-			return;
-		} catch {
-			setFeedbackMessage("Could not restore purchases. Please try again.");
-		}
-		setIsRestoring(false);
-	}
-
-	const isBusy = isPurchasing || isRestoring;
+	const handleRestore = useCallback((): void => {
+		setFeedbackMessage(
+			"Restore purchases is not available yet in this version.",
+		);
+	}, []);
 
 	const ctaLabel =
-		offerings === null
-			? "Loading..."
-			: selectedPlan === "lifetime"
-				? "Get Unmatch — $29.99"
-				: "Subscribe — $4.99/month";
+		selectedPlan === "lifetime"
+			? "Get Unmatch — $29.99"
+			: "Subscribe — $4.99/month";
 
 	// ---------------------------------------------------------------------------
 	// Render
@@ -198,34 +136,17 @@ export default function PaywallScreen(): React.ReactElement {
 						styles.planCard,
 						selectedPlan === "monthly" && styles.planCardSelected,
 					]}
-					onPress={() => {
-						setSelectedPlan("monthly");
-					}}
+					onPress={() => { setSelectedPlan("monthly"); }}
 					accessibilityLabel="Monthly plan — $4.99 per month"
 					accessibilityRole="button"
 					accessibilityState={{ selected: selectedPlan === "monthly" }}
 				>
-					<View style={styles.planCardInner}>
-						<View style={styles.planCardContent}>
-							<View style={styles.boostBadge}>
-								<Text style={styles.boostBadgeText}>
-									Less than one Tinder boost
-								</Text>
-							</View>
-							<Text variant="titleMedium" style={styles.planPrice}>
-								$4.99/month
-							</Text>
-							<Text variant="bodySmall" style={styles.planNote}>
-								Cancel anytime
-							</Text>
-						</View>
-						<View
-							style={[
-								styles.planRadio,
-								selectedPlan === "monthly" && styles.planRadioSelected,
-							]}
-						/>
-					</View>
+					<Text variant="titleMedium" style={styles.planPrice}>
+						$4.99/month
+					</Text>
+					<Text variant="bodySmall" style={styles.planNote}>
+						Cancel anytime
+					</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity
@@ -233,32 +154,20 @@ export default function PaywallScreen(): React.ReactElement {
 						styles.planCard,
 						selectedPlan === "lifetime" && styles.planCardSelected,
 					]}
-					onPress={() => {
-						setSelectedPlan("lifetime");
-					}}
+					onPress={() => { setSelectedPlan("lifetime"); }}
 					accessibilityLabel="Lifetime plan — $29.99 one-time purchase"
 					accessibilityRole="button"
 					accessibilityState={{ selected: selectedPlan === "lifetime" }}
 				>
-					<View style={styles.planCardInner}>
-						<View style={styles.planCardContent}>
-							<View style={styles.bestValueBadge}>
-								<Text style={styles.bestValueText}>Best value</Text>
-							</View>
-							<Text variant="titleMedium" style={styles.planPrice}>
-								$29.99
-							</Text>
-							<Text variant="bodySmall" style={styles.planNote}>
-								One-time purchase — full access forever
-							</Text>
-						</View>
-						<View
-							style={[
-								styles.planRadio,
-								selectedPlan === "lifetime" && styles.planRadioSelected,
-							]}
-						/>
+					<View style={styles.bestValueBadge}>
+						<Text style={styles.bestValueText}>Best value</Text>
 					</View>
+					<Text variant="titleMedium" style={styles.planPrice}>
+						$29.99
+					</Text>
+					<Text variant="bodySmall" style={styles.planNote}>
+						One-time purchase
+					</Text>
 				</TouchableOpacity>
 			</View>
 
@@ -267,16 +176,13 @@ export default function PaywallScreen(): React.ReactElement {
 				mode="contained"
 				onPress={handlePurchase}
 				loading={isPurchasing}
-				disabled={isBusy || offerings === null}
+				disabled={isPurchasing}
 				style={styles.ctaButton}
 				contentStyle={styles.ctaButtonContent}
 				labelStyle={styles.ctaButtonLabel}
 				accessibilityLabel={ctaLabel}
 				accessibilityRole="button"
-				accessibilityState={{
-					disabled: isBusy || offerings === null,
-					busy: isBusy,
-				}}
+				accessibilityState={{ disabled: isPurchasing, busy: isPurchasing }}
 			>
 				{ctaLabel}
 			</Button>
@@ -309,8 +215,6 @@ export default function PaywallScreen(): React.ReactElement {
 			<Button
 				mode="text"
 				onPress={handleRestore}
-				loading={isRestoring}
-				disabled={isBusy}
 				textColor={colors.muted}
 				style={styles.restoreButton}
 				labelStyle={styles.restoreLabel}
@@ -398,23 +302,18 @@ const styles = StyleSheet.create({
 	},
 	// Plan selector
 	planSelector: {
-		gap: 10,
+		flexDirection: "row",
+		gap: 12,
 	},
 	planCard: {
+		flex: 1,
 		backgroundColor: colors.surface,
 		borderRadius: 14,
 		borderWidth: 2,
 		borderColor: colors.border,
-		paddingVertical: 16,
-		paddingHorizontal: 16,
-	},
-	planCardInner: {
-		flexDirection: "row",
+		paddingVertical: 20,
+		paddingHorizontal: 12,
 		alignItems: "center",
-		gap: 12,
-	},
-	planCardContent: {
-		flex: 1,
 		gap: 4,
 	},
 	planCardSelected: {
@@ -427,39 +326,14 @@ const styles = StyleSheet.create({
 	},
 	planNote: {
 		color: colors.muted,
-	},
-	planRadio: {
-		width: 22,
-		height: 22,
-		borderRadius: 11,
-		borderWidth: 2,
-		borderColor: colors.border,
-		flexShrink: 0,
-	},
-	planRadioSelected: {
-		borderColor: colors.primary,
-		backgroundColor: colors.primary,
-	},
-	boostBadge: {
-		backgroundColor: colors.primary,
-		borderRadius: 6,
-		paddingHorizontal: 8,
-		paddingVertical: 2,
-		alignSelf: "flex-start",
-	},
-	boostBadgeText: {
-		color: "#FFFFFF",
-		fontSize: 11,
-		fontWeight: "700",
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
+		textAlign: "center",
 	},
 	bestValueBadge: {
 		backgroundColor: colors.warning,
 		borderRadius: 6,
 		paddingHorizontal: 8,
 		paddingVertical: 2,
-		alignSelf: "flex-start",
+		marginBottom: 4,
 	},
 	bestValueText: {
 		color: colors.background,

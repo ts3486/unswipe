@@ -317,7 +317,7 @@ export default function OnboardingScreen(): React.ReactElement {
 				}
 			}
 
-			// After demo, go to hard paywall.
+			// After demo, go to hard paywall
 			router.replace("/paywall");
 		} finally {
 			setIsSubmitting(false);
@@ -349,7 +349,7 @@ export default function OnboardingScreen(): React.ReactElement {
 							Something worth protecting
 						</Text>
 						<Text variant="bodyLarge" style={styles.welcomeSubtitle}>
-							Unmatch helps you be intentional about dating apps — not remove
+							This app helps you be intentional about dating apps — not remove
 							them from your life, just put you back in control.
 						</Text>
 					</View>
@@ -871,81 +871,39 @@ export default function OnboardingScreen(): React.ReactElement {
 							Each day, a quick private reflection on how you're feeling.
 						</Text>
 
-						<Surface style={styles.checkinPreview} elevation={2}>
-							<View style={styles.checkinPreviewRow}>
-								<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
-									Mood
-								</Text>
-								<View style={styles.checkinPreviewChips}>
-									{[1, 2, 3, 4, 5].map((n) => (
-										<View
-											key={`mood-${n}`}
-											style={[
-												styles.checkinChip,
-												n === 3 && styles.checkinChipActive,
-											]}
-										>
-											<Text
-												style={[
-													styles.checkinChipText,
-													n === 3 && styles.checkinChipTextActive,
-												]}
-											>
-												{n}
-											</Text>
-										</View>
-									))}
-								</View>
+						{/* Preview of mood/fatigue/urge rating chips (display-only) */}
+						<Surface style={styles.demoActionCard} elevation={2}>
+							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
+								Mood
+							</Text>
+							<View style={styles.chipGrid}>
+								{[1, 2, 3, 4, 5].map((n) => (
+									<Chip key={`mood-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
+										{n}
+									</Chip>
+								))}
 							</View>
-							<View style={styles.checkinPreviewRow}>
-								<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
-									Fatigue
-								</Text>
-								<View style={styles.checkinPreviewChips}>
-									{[1, 2, 3, 4, 5].map((n) => (
-										<View
-											key={`fatigue-${n}`}
-											style={[
-												styles.checkinChip,
-												n === 2 && styles.checkinChipActive,
-											]}
-										>
-											<Text
-												style={[
-													styles.checkinChipText,
-													n === 2 && styles.checkinChipTextActive,
-												]}
-											>
-												{n}
-											</Text>
-										</View>
-									))}
-								</View>
+
+							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
+								Fatigue
+							</Text>
+							<View style={styles.chipGrid}>
+								{[1, 2, 3, 4, 5].map((n) => (
+									<Chip key={`fatigue-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
+										{n}
+									</Chip>
+								))}
 							</View>
-							<View style={styles.checkinPreviewRow}>
-								<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
-									Urge
-								</Text>
-								<View style={styles.checkinPreviewChips}>
-									{[1, 2, 3, 4, 5].map((n) => (
-										<View
-											key={`urge-${n}`}
-											style={[
-												styles.checkinChip,
-												n === 4 && styles.checkinChipActive,
-											]}
-										>
-											<Text
-												style={[
-													styles.checkinChipText,
-													n === 4 && styles.checkinChipTextActive,
-												]}
-											>
-												{n}
-											</Text>
-										</View>
-									))}
-								</View>
+
+							<Text variant="labelMedium" style={styles.checkinPreviewLabel}>
+								Urge level
+							</Text>
+							<View style={styles.chipGrid}>
+								{[1, 2, 3, 4, 5].map((n) => (
+									<Chip key={`urge-${n}`} style={styles.previewChip} textStyle={styles.previewChipText}>
+										{n}
+									</Chip>
+								))}
 							</View>
 						</Surface>
 					</ScrollView>
@@ -1029,8 +987,7 @@ function DemoNiceWork({
 					Nice work.
 				</Text>
 				<Text variant="bodyLarge" style={styles.niceworkBody}>
-					You just completed a reset and saw your daily check-in. That's the
-					core of Unmatch.
+					You just completed a reset and saw your daily check-in. That's the core of Unmatch.
 				</Text>
 				{isSubmitting && (
 					<Text variant="bodySmall" style={styles.niceworkLoading}>
@@ -1300,49 +1257,20 @@ const styles = StyleSheet.create({
 		lineHeight: 24,
 	},
 	// Checkin preview
-	checkinPreview: {
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-		padding: 20,
-		gap: 16,
-	},
-	checkinPreviewRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 12,
-	},
 	checkinPreviewLabel: {
 		color: colors.muted,
-		width: 56,
 		textTransform: "uppercase",
-		letterSpacing: 0.5,
-		fontSize: 11,
+		letterSpacing: 0.8,
+		marginTop: 8,
+		marginBottom: 4,
 	},
-	checkinPreviewChips: {
-		flexDirection: "row",
-		gap: 8,
-		flex: 1,
+	previewChip: {
+		backgroundColor: colors.surface,
+		borderColor: colors.border,
+		borderWidth: 1,
 	},
-	checkinChip: {
-		width: 32,
-		height: 32,
-		borderRadius: 16,
-		backgroundColor: colors.border,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	checkinChipActive: {
-		backgroundColor: colors.primary,
-	},
-	checkinChipText: {
+	previewChipText: {
 		color: colors.muted,
-		fontSize: 13,
-		fontWeight: "600",
-	},
-	checkinChipTextActive: {
-		color: colors.text,
 	},
 	// Nice work screen
 	niceworkIconContainer: {

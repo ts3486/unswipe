@@ -7,15 +7,14 @@ import { colors } from "@/src/constants/theme";
 import { useAppState } from "@/src/contexts/AppStateContext";
 import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
 import { updateUserProfile } from "@/src/data/repositories";
-import { getSubscription } from "@/src/data/repositories/subscription-repository";
-import type { NotificationStyle, SubscriptionPeriod } from "@/src/domain/types";
+import type { NotificationStyle } from "@/src/domain/types";
 import {
 	cancelAllScheduled,
 	requestPermissions,
 } from "@/src/services/notifications";
 import { router } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { Divider, List, Text } from "react-native-paper";
 
@@ -31,16 +30,6 @@ export default function SettingsScreen(): React.ReactElement {
 		userProfile?.notification_style ?? "normal",
 	);
 	const [isUpdating, setIsUpdating] = useState<boolean>(false);
-	const [planPeriod, setPlanPeriod] = useState<SubscriptionPeriod | null>(null);
-
-	useEffect(() => {
-		void (async () => {
-			const sub = await getSubscription(db);
-			if (sub !== null) {
-				setPlanPeriod(sub.period);
-			}
-		})();
-	}, [db]);
 
 	// ---------------------------------------------------------------------------
 	// Actions
@@ -166,15 +155,11 @@ export default function SettingsScreen(): React.ReactElement {
 			</Text>
 			<View style={styles.listCard}>
 				<List.Item
-					title={planPeriod === "monthly" ? "Monthly Plan" : "Lifetime Plan"}
-					description={
-						planPeriod === "monthly"
-							? "$4.99/month — cancel anytime"
-							: "One-time purchase — full access forever"
-					}
+					title="Unmatch Unlocked"
+					description="You have full access. Thank you!"
 					titleStyle={styles.listTitle}
 					descriptionStyle={styles.listDesc}
-					accessibilityLabel={`Your plan: ${planPeriod === "monthly" ? "Monthly" : "Lifetime"}`}
+					accessibilityLabel="Unmatch is unlocked — you have full access"
 					left={() => (
 						<List.Icon icon="check-circle-outline" color={colors.success} />
 					)}
@@ -253,7 +238,9 @@ export default function SettingsScreen(): React.ReactElement {
 								);
 							}}
 							accessibilityLabel="Reset onboarding for testing"
-							left={() => <List.Icon icon="restart" color={colors.warning} />}
+							left={() => (
+								<List.Icon icon="restart" color={colors.warning} />
+							)}
 						/>
 					</View>
 				</>
