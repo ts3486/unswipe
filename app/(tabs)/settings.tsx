@@ -309,6 +309,7 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 		overflow: "hidden",
+		paddingLeft: 8,
 	},
 	listTitle: {
 		color: colors.text,

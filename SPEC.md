@@ -5,11 +5,14 @@ This document tracks feature-level requirements, screen specs, and implementatio
 ## Screens
 
 ### /onboarding
-- 5-step flow: Welcome → Goal → Triggers → Budget (conditional) → Notifications
-- **[NEW] Step 6: Demo Reset** — guided first panic reset (auto-select "swipe", breathing exercise with coaching overlay, coping action card, completion message)
-- Progress indicator (dots/thin bar) across all steps
-- Breathing step skippable with visible "Skip" link
-- **[NEW] Onboarding-to-paywall transition** — after demo reset: "Nice work" screen → 1.5s pause → paywall with context message
+- **[DONE] Streamlined 4-step flow:** Welcome → Personalize → Features → Ready → Paywall
+- **Personalize** — goal selection (single scrollable screen); Continue disabled until a goal is selected
+- **Features** — value proposition showcase with 4 feature cards (guided exercises, smart reminders, progress tracking, 7-day course); each card has a color-coded icon, title, and description
+- **Ready** — personalized "You're all set" screen with goal affirmation and course/notification preview; CTA: "Start my pause"
+- Back navigation on steps 2–4; progress dots across all steps
+- Goal requires explicit tap (no pre-selection); Continue disabled until selected
+- Budget setup deferred to post-onboarding (Settings or first spend-urge panic); notification preference defaults to "on" (changeable in Settings)
+- Notification permission requested after Ready CTA tap
 
 ### /(tabs)/home
 - Logo + "Today done" chip
@@ -99,5 +102,7 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Gender-neutral, inclusive language (maintained)
 
 ## Changelog
+- 2026-02-28: Replaced onboarding breathing demo with value proposition showcase; new flow: Welcome → Personalize → Features (4 value-prop cards) → Ready (personalized CTA); removed breathing timer/state; "Start my pause" CTA
+- 2026-02-28: Streamlined onboarding from 10-12 screens to 4 steps; merged Goal+Triggers+Course into single screen; added back navigation; removed demo check-in/action dump; deferred budget setup and notification preference to post-onboarding
 - 2026-02-28: Implemented course unlock notification scheduling (8am, days 2–7); removed stealth notification mode; simplified onboarding notification step to On/Off with support text
 - 2026-02-27: Added UI/UX improvement specs (paywall redesign, onboarding demo reset, panic polish, home/progress enhancements, notifications, share, accessibility)

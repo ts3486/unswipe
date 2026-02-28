@@ -1,67 +1,25 @@
-// Onboarding screen — multi-step flow.
-// Steps: Welcome, Goal, Triggers, Budget (conditional), Notifications, Demo Reset.
+// Onboarding screen — streamlined 4-step flow.
+// Steps: Welcome → Personalize (goal) → Features (value props) → Ready.
 // TypeScript strict mode.
 
-import { BreathingExercise } from "@/src/components/BreathingExercise";
 import { Logo } from "@/src/components/Logo";
-import {
-	FATIGUE_LABELS,
-	MOOD_LABELS,
-	RatingChips,
-	URGE_LABELS,
-} from "@/src/components/RatingChips";
-import {
-	BREATHING_EXHALE,
-	BREATHING_HOLD,
-	BREATHING_INHALE,
-} from "@/src/constants/config";
 import { colors } from "@/src/constants/theme";
 import { useAnalytics } from "@/src/contexts/AnalyticsContext";
 import { useAppState } from "@/src/contexts/AppStateContext";
-import { getCatalog } from "@/src/data/seed-loader";
-import type {
-	GoalType,
-	NotificationStyle,
-	SpendingLimitMode,
-} from "@/src/domain/types";
+import type { GoalType } from "@/src/domain/types";
 import { requestPermissions } from "@/src/services/notifications";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	Alert,
-	KeyboardAvoidingView,
-	Platform,
-	ScrollView,
-	StyleSheet,
-	View,
-} from "react-native";
-import {
-	Button,
-	Card,
-	Chip,
-	Divider,
-	SegmentedButtons,
-	Surface,
-	Text,
-	TextInput,
-} from "react-native-paper";
+import { useCallback, useState } from "react";
+import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Button, Surface, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type Step =
-	| "welcome"
-	| "goal"
-	| "triggers"
-	| "budget"
-	| "notifications"
-	| "demo";
-
-// Sub-steps within the demo step
-type DemoSubStep = "intro" | "breathing" | "action" | "checkin" | "nicework";
+type Step = "welcome" | "personalize" | "features" | "ready";
 
 interface GoalOption {
 	id: GoalType;
@@ -69,12 +27,11 @@ interface GoalOption {
 	description: string;
 }
 
-const GOAL_AFFIRMATIONS: Record<GoalType, string> = {
-	reduce_swipe: "Small wins add up.",
-	reduce_open: "Less checking, more living.",
-	reduce_night_check: "Sleep is self-care.",
-	reduce_spend: "Your wallet will thank you.",
-};
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const STEPS: Step[] = ["welcome", "personalize", "features", "ready"];
 
 const GOAL_OPTIONS: GoalOption[] = [
 	{
@@ -99,32 +56,53 @@ const GOAL_OPTIONS: GoalOption[] = [
 	},
 ];
 
-// Ordered steps for the progress indicator. 'budget' is shown only when
-// goal is reduce_spend, but we always include it in the ordered list so
-// the dot count is stable after goal selection.
-const ORDERED_STEPS: Step[] = [
-	"welcome",
-	"goal",
-	"triggers",
-	"notifications",
-	"demo",
-];
-// budget is inserted between triggers and notifications when relevant
-const ORDERED_STEPS_WITH_BUDGET: Step[] = [
-	"welcome",
-	"goal",
-	"triggers",
-	"budget",
-	"notifications",
-	"demo",
-];
+const GOAL_AFFIRMATIONS: Record<GoalType, string> = {
+	reduce_swipe: "Less swiping, more living",
+	reduce_open: "Less checking, more living.",
+	reduce_night_check: "Choose other activities before bed.",
+	reduce_spend: "Save money for things that truly matter.",
+};
 
-// Demo breathing duration — shorter than the full 60s for onboarding UX
-const DEMO_BREATHING_SECONDS =
-	BREATHING_INHALE + BREATHING_HOLD + BREATHING_EXHALE; // one full cycle = 12s
+interface FeatureShowcase {
+	icon: string;
+	title: string;
+	description: string;
+	color: string;
+}
+
+const FEATURE_SHOWCASES: FeatureShowcase[] = [
+	{
+		icon: "meditation",
+		title: "Guided exercises",
+		description:
+			"When the urge hits, a 60-second breathing session helps you ride it out — no willpower needed.",
+		color: colors.primary,
+	},
+	{
+		icon: "bell-ring-outline",
+		title: "Smart reminders",
+		description:
+			"Timely nudges in the evening, streak alerts, and weekly summaries keep you on track without being annoying.",
+		color: colors.warning,
+	},
+	{
+		icon: "chart-timeline-variant",
+		title: "Progress you can see",
+		description:
+			"Track your streaks, see which days you resisted, and watch your Resist Rank climb as you build the habit.",
+		color: colors.success,
+	},
+	{
+		icon: "book-open-page-variant-outline",
+		title: "7-day starter course",
+		description:
+			"Short daily lessons on the psychology behind dating app habits — understand your patterns to change them.",
+		color: colors.secondary,
+	},
+];
 
 // ---------------------------------------------------------------------------
-// Progress indicator
+// Sub-components
 // ---------------------------------------------------------------------------
 
 interface ProgressDotsProps {
@@ -156,6 +134,25 @@ function ProgressDots({
 	);
 }
 
+function BackButton({ onPress }: { onPress: () => void }): React.ReactElement {
+	return (
+		<View style={styles.backButtonRow}>
+			<Button
+				mode="text"
+				onPress={onPress}
+				icon="chevron-left"
+				textColor={colors.muted}
+				style={styles.backButton}
+				compact
+				accessibilityLabel="Go back"
+				testID="back-button"
+			>
+				Back
+			</Button>
+		</View>
+	);
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -163,200 +160,81 @@ function ProgressDots({
 export default function OnboardingScreen(): React.ReactElement {
 	const { completeOnboarding } = useAppState();
 	const analytics = useAnalytics();
-	const catalog = getCatalog();
 
+	// Step state
 	const [step, setStep] = useState<Step>("welcome");
-	const [demoSubStep, setDemoSubStep] = useState<DemoSubStep>("intro");
-	const [demoTimeLeft, setDemoTimeLeft] = useState<number>(
-		DEMO_BREATHING_SECONDS,
-	);
-	const demoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-	// Checkin demo state
-	const [demoMood, setDemoMood] = useState<number>(0);
-	const [demoFatigue, setDemoFatigue] = useState<number>(0);
-	const [demoUrge, setDemoUrge] = useState<number>(0);
-	const [demoOpenedAtNight, setDemoOpenedAtNight] = useState<boolean | null>(null);
-	const [demoSpentToday, setDemoSpentToday] = useState<boolean | null>(null);
+	// Personalize state
+	const [selectedGoal, setSelectedGoal] = useState<GoalType | null>(null);
 
-	const [selectedGoal, setSelectedGoal] = useState<GoalType>("reduce_swipe");
-	const [selectedTriggerIds, setSelectedTriggerIds] = useState<Set<string>>(
-		new Set(),
-	);
-	const [budgetPeriod, setBudgetPeriod] = useState<"daily" | "weekly">(
-		"weekly",
-	);
-	const [budgetAmount, setBudgetAmount] = useState<string>("");
-	const [budgetMode, setBudgetMode] = useState<SpendingLimitMode>("soft");
-	const [notificationStyle, setNotificationStyle] =
-		useState<NotificationStyle>("normal");
-	const [starterCourseEnabled, setStarterCourseEnabled] =
-		useState<boolean>(true);
+	// Submission state
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-	// Derive ordered steps for progress indicator based on selected goal
-	const orderedSteps =
-		selectedGoal === "reduce_spend" ? ORDERED_STEPS_WITH_BUDGET : ORDERED_STEPS;
-
-	// ---------------------------------------------------------------------------
-	// Demo timer
-	// ---------------------------------------------------------------------------
-
-	const clearDemoTimer = useCallback((): void => {
-		if (demoTimerRef.current !== null) {
-			clearInterval(demoTimerRef.current);
-			demoTimerRef.current = null;
-		}
-	}, []);
-
-	// Clean up on unmount
-	useEffect(() => {
-		return () => {
-			clearDemoTimer();
-		};
-	}, [clearDemoTimer]);
-
-	const startDemoBreathing = useCallback((): void => {
-		clearDemoTimer();
-		setDemoTimeLeft(DEMO_BREATHING_SECONDS);
-		setDemoSubStep("breathing");
-
-		const id = setInterval(() => {
-			setDemoTimeLeft((prev) => {
-				const next = prev - 1;
-				if (next <= 0) {
-					clearInterval(id);
-					demoTimerRef.current = null;
-					setDemoSubStep("action");
-					return 0;
-				}
-				return next;
-			});
-		}, 1_000);
-
-		demoTimerRef.current = id;
-	}, [clearDemoTimer]);
-
-	const skipDemoBreathing = useCallback((): void => {
-		clearDemoTimer();
-		setDemoSubStep("action");
-	}, [clearDemoTimer]);
 
 	// ---------------------------------------------------------------------------
 	// Navigation
 	// ---------------------------------------------------------------------------
 
-	const goToGoal = useCallback((): void => {
-		setStep("goal");
-	}, []);
-	const goToTriggers = useCallback((): void => {
-		setStep("triggers");
-	}, []);
-
-	const goToBudgetOrNotifications = useCallback((): void => {
-		if (selectedGoal === "reduce_spend") {
-			setStep("budget");
-		} else {
-			setStep("notifications");
+	const goBack = useCallback((): void => {
+		if (step === "personalize") {
+			setStep("welcome");
+		} else if (step === "features") {
+			setStep("personalize");
+		} else if (step === "ready") {
+			setStep("features");
 		}
-	}, [selectedGoal]);
-
-	const goToNotifications = useCallback((): void => {
-		setStep("notifications");
-	}, []);
-
-	const goToDemo = useCallback((): void => {
-		setDemoSubStep("intro");
-		setDemoTimeLeft(DEMO_BREATHING_SECONDS);
-		setStep("demo");
-	}, []);
+	}, [step]);
 
 	// ---------------------------------------------------------------------------
-	// Trigger toggle
-	// ---------------------------------------------------------------------------
-
-	const toggleTrigger = useCallback((triggerId: string): void => {
-		setSelectedTriggerIds((prev) => {
-			const next = new Set(prev);
-			if (next.has(triggerId)) {
-				next.delete(triggerId);
-			} else {
-				next.add(triggerId);
-			}
-			return next;
-		});
-	}, []);
-
-	// ---------------------------------------------------------------------------
-	// Submit (called after demo nice-work screen)
+	// Submit (called from Ready screen)
 	// ---------------------------------------------------------------------------
 
 	const handleStart = useCallback(async (): Promise<void> => {
-		if (isSubmitting) return;
+		if (isSubmitting || selectedGoal === null) return;
 		setIsSubmitting(true);
 
 		try {
-			const hasBudget =
-				selectedGoal === "reduce_spend" && budgetAmount.trim().length > 0;
-			const parsedAmount = hasBudget
-				? Math.round(Number.parseFloat(budgetAmount) * 100)
-				: null;
-
 			await completeOnboarding({
 				locale: "en",
-				notification_style: notificationStyle,
-				plan_selected: starterCourseEnabled ? "starter_7d" : "",
+				notification_style: "normal",
+				plan_selected: "starter_7d",
 				goal_type: selectedGoal,
-				spending_budget_weekly: budgetPeriod === "weekly" ? parsedAmount : null,
-				spending_budget_daily: budgetPeriod === "daily" ? parsedAmount : null,
-				spending_limit_mode: hasBudget ? budgetMode : null,
+				spending_budget_weekly: null,
+				spending_budget_daily: null,
+				spending_limit_mode: null,
 			});
 
 			analytics.track({
 				name: "onboarding_completed",
 				props: {
 					goal_type: selectedGoal,
-					trigger_count: selectedTriggerIds.size,
-					has_budget: hasBudget,
+					trigger_count: 0,
+					has_budget: false,
 				},
 			});
 
-			// Request notification permission if not off
-			if (notificationStyle !== "off") {
-				const granted = await requestPermissions();
-				if (!granted) {
-					Alert.alert(
-						"Notifications Disabled",
-						"You can enable notifications in your device settings.",
-					);
-				}
+			// Request notification permissions (default is "normal")
+			const granted = await requestPermissions();
+			if (!granted) {
+				Alert.alert(
+					"Notifications Disabled",
+					"You can enable notifications in your device settings.",
+				);
 			}
 
-			// After demo, go to hard paywall
 			router.replace("/paywall");
 		} finally {
 			setIsSubmitting(false);
 		}
-	}, [
-		isSubmitting,
-		completeOnboarding,
-		analytics,
-		selectedGoal,
-		selectedTriggerIds,
-		budgetAmount,
-		budgetPeriod,
-		budgetMode,
-		notificationStyle,
-		starterCourseEnabled,
-	]);
+	}, [isSubmitting, selectedGoal, completeOnboarding, analytics]);
 
 	// ---------------------------------------------------------------------------
-	// Steps
+	// Step: Welcome
 	// ---------------------------------------------------------------------------
 
 	if (step === "welcome") {
 		return (
 			<View style={styles.root}>
+				<View style={styles.welcomeSafeArea} />
 				<View style={styles.centeredContent}>
 					<Logo markSize={72} layout="vertical" wordmarkColor={colors.text} />
 					<View style={styles.welcomeTextBlock}>
@@ -364,15 +242,17 @@ export default function OnboardingScreen(): React.ReactElement {
 							Take a pause from dating
 						</Text>
 						<Text variant="bodyLarge" style={styles.welcomeSubtitle}>
-							This app helps you pause from dating apps and be intentional about it — not remove
-							them from your life, just put you back in control.
+							This app helps you pause from dating apps and be intentional about
+							it — not remove them from your life, just put you back in control.
 						</Text>
 					</View>
 				</View>
 				<View style={styles.bottomActions}>
 					<Button
 						mode="contained"
-						onPress={goToGoal}
+						onPress={() => {
+							setStep("personalize");
+						}}
 						style={styles.primaryButton}
 						contentStyle={styles.primaryButtonContent}
 						labelStyle={styles.primaryButtonLabel}
@@ -385,15 +265,21 @@ export default function OnboardingScreen(): React.ReactElement {
 		);
 	}
 
-	if (step === "goal") {
+	// ---------------------------------------------------------------------------
+	// Step: Personalize (Goal + Triggers + Course)
+	// ---------------------------------------------------------------------------
+
+	if (step === "personalize") {
 		return (
 			<View style={styles.root}>
-				<ProgressDots steps={orderedSteps} current="goal" />
+				<ProgressDots steps={STEPS} current="personalize" />
+				<BackButton onPress={goBack} />
 				<ScrollView
 					style={styles.scroll}
 					contentContainerStyle={styles.scrollContent}
 					showsVerticalScrollIndicator={false}
 				>
+					{/* Goal selection */}
 					<Text variant="headlineMedium" style={styles.stepTitle}>
 						What would feel like a win to you?
 					</Text>
@@ -444,273 +330,14 @@ export default function OnboardingScreen(): React.ReactElement {
 				<View style={styles.bottomActions}>
 					<Button
 						mode="contained"
-						onPress={goToTriggers}
-						style={styles.primaryButton}
-						contentStyle={styles.primaryButtonContent}
-						labelStyle={styles.primaryButtonLabel}
-						testID="goal-continue"
-					>
-						Continue
-					</Button>
-				</View>
-			</View>
-		);
-	}
-
-	if (step === "triggers") {
-		return (
-			<View style={styles.root}>
-				<ProgressDots steps={orderedSteps} current="triggers" />
-				<ScrollView
-					style={styles.scroll}
-					contentContainerStyle={styles.scrollContent}
-					showsVerticalScrollIndicator={false}
-				>
-					<Text variant="headlineMedium" style={styles.stepTitle}>
-						When does the pull feel strongest?
-					</Text>
-					<Text variant="bodyMedium" style={styles.stepSubtitle}>
-						No judgment — these are just patterns.
-					</Text>
-					<View style={styles.chipGrid}>
-						{catalog.triggers.map((trigger) => {
-							const selected = selectedTriggerIds.has(trigger.id);
-							return (
-								<Chip
-									key={trigger.id}
-									selected={selected}
-									onPress={() => {
-										toggleTrigger(trigger.id);
-									}}
-									style={[
-										styles.triggerChip,
-										selected && styles.triggerChipSelected,
-									]}
-									textStyle={[
-										styles.triggerChipText,
-										selected && styles.triggerChipTextSelected,
-									]}
-								>
-									{trigger.label}
-								</Chip>
-							);
-						})}
-					</View>
-				</ScrollView>
-				<View style={styles.bottomActions}>
-					<Button
-						mode="contained"
-						onPress={goToBudgetOrNotifications}
-						style={styles.primaryButton}
-						contentStyle={styles.primaryButtonContent}
-						labelStyle={styles.primaryButtonLabel}
-						testID="triggers-continue"
-					>
-						Continue
-					</Button>
-				</View>
-			</View>
-		);
-	}
-
-	if (step === "budget") {
-		return (
-			<KeyboardAvoidingView
-				style={styles.root}
-				behavior={Platform.OS === "ios" ? "padding" : "height"}
-			>
-				<ProgressDots steps={orderedSteps} current="budget" />
-				<ScrollView
-					style={styles.scroll}
-					contentContainerStyle={styles.scrollContent}
-					showsVerticalScrollIndicator={false}
-					keyboardShouldPersistTaps="handled"
-				>
-					<Text variant="headlineMedium" style={styles.stepTitle}>
-						Set a gentle spending limit (optional)
-					</Text>
-					<Text variant="bodyMedium" style={styles.stepSubtitle}>
-						A soft limit reminds you before you overspend. A pledge is a
-						personal commitment.
-					</Text>
-
-					<Text variant="labelLarge" style={styles.fieldLabel}>
-						Period
-					</Text>
-					<SegmentedButtons
-						value={budgetPeriod}
-						onValueChange={(v) => {
-							setBudgetPeriod(v as "daily" | "weekly");
+						onPress={() => {
+							setStep("features");
 						}}
-						buttons={[
-							{ value: "daily", label: "Daily" },
-							{ value: "weekly", label: "Weekly" },
-						]}
-						style={styles.segmented}
-						theme={{ colors: { secondaryContainer: colors.primary } }}
-					/>
-
-					<Text variant="labelLarge" style={styles.fieldLabel}>
-						Amount
-					</Text>
-					<TextInput
-						mode="outlined"
-						placeholder="0.00"
-						value={budgetAmount}
-						onChangeText={setBudgetAmount}
-						keyboardType="decimal-pad"
-						left={<TextInput.Affix text="$" />}
-						style={styles.textInput}
-						outlineColor={colors.border}
-						activeOutlineColor={colors.primary}
-						textColor={colors.text}
-						placeholderTextColor={colors.muted}
-					/>
-
-					<Text variant="labelLarge" style={styles.fieldLabel}>
-						Mode
-					</Text>
-					<SegmentedButtons
-						value={budgetMode}
-						onValueChange={(v) => {
-							setBudgetMode(v as SpendingLimitMode);
-						}}
-						buttons={[
-							{ value: "soft", label: "Soft reminder" },
-							{ value: "pledge", label: "Personal pledge" },
-						]}
-						style={styles.segmented}
-						theme={{ colors: { secondaryContainer: colors.primary } }}
-					/>
-				</ScrollView>
-				<View style={styles.bottomActions}>
-					<Button
-						mode="contained"
-						onPress={goToNotifications}
+						disabled={selectedGoal === null}
 						style={styles.primaryButton}
 						contentStyle={styles.primaryButtonContent}
 						labelStyle={styles.primaryButtonLabel}
-						testID="budget-continue"
-					>
-						Continue
-					</Button>
-					<Button
-						mode="text"
-						onPress={goToNotifications}
-						textColor={colors.muted}
-						testID="budget-skip"
-					>
-						Skip for now
-					</Button>
-				</View>
-			</KeyboardAvoidingView>
-		);
-	}
-
-	if (step === "notifications") {
-		return (
-			<View style={styles.root}>
-				<ProgressDots steps={orderedSteps} current="notifications" />
-				<ScrollView
-					style={styles.scroll}
-					contentContainerStyle={styles.scrollContent}
-					showsVerticalScrollIndicator={false}
-				>
-					<Text variant="headlineMedium" style={styles.stepTitle}>
-						Stay on track with notifications
-					</Text>
-					<Text variant="bodyMedium" style={styles.stepSubtitle}>
-						Notifications help you pause, reflect, and stay on track with your dating app goals.
-					</Text>
-
-					{(["normal", "off"] as NotificationStyle[]).map(
-						(style_) => {
-							const labels: Record<
-								NotificationStyle,
-								{ title: string; desc: string }
-							> = {
-								normal: {
-									title: "On",
-									desc: "Receive reminders, streak alerts, and course updates.",
-								},
-								off: { title: "Off", desc: "No notifications." },
-							};
-							const info = labels[style_];
-							const selected = notificationStyle === style_;
-							return (
-								<Surface
-									key={style_}
-									style={[
-										styles.notifCard,
-										selected && styles.notifCardSelected,
-									]}
-									elevation={selected ? 3 : 1}
-								>
-									<Button
-										mode="text"
-										onPress={() => {
-											setNotificationStyle(style_);
-										}}
-										style={styles.goalCardButton}
-										contentStyle={styles.goalCardButtonContent}
-										testID={`notif-${style_}`}
-									>
-										<View style={styles.goalCardInner}>
-											<Text
-												variant="titleMedium"
-												style={[
-													styles.goalCardTitle,
-													selected && styles.goalCardTitleSelected,
-												]}
-											>
-												{info.title}
-											</Text>
-											<Text variant="bodySmall" style={styles.goalCardDesc}>
-												{info.desc}
-											</Text>
-										</View>
-									</Button>
-								</Surface>
-							);
-						},
-					)}
-
-					<View style={styles.courseToggleRow}>
-						<View style={styles.courseToggleText}>
-							<Text variant="titleMedium" style={styles.goalCardTitle}>
-								Enable 7-day starter course
-							</Text>
-							<Text variant="bodySmall" style={styles.goalCardDesc}>
-								A gentle daily lesson delivered over 7 days.
-							</Text>
-						</View>
-						<Chip
-							selected={starterCourseEnabled}
-							onPress={() => {
-								setStarterCourseEnabled((prev) => !prev);
-							}}
-							style={[
-								styles.toggleChip,
-								starterCourseEnabled && styles.toggleChipSelected,
-							]}
-							textStyle={
-								starterCourseEnabled
-									? styles.triggerChipTextSelected
-									: styles.triggerChipText
-							}
-						>
-							{starterCourseEnabled ? "On" : "Off"}
-						</Chip>
-					</View>
-				</ScrollView>
-				<View style={styles.bottomActions}>
-					<Button
-						mode="contained"
-						onPress={goToDemo}
-						style={styles.primaryButton}
-						contentStyle={styles.primaryButtonContent}
-						labelStyle={styles.primaryButtonLabel}
-						testID="notifications-continue"
+						testID="personalize-continue"
 					>
 						Continue
 					</Button>
@@ -720,353 +347,129 @@ export default function OnboardingScreen(): React.ReactElement {
 	}
 
 	// ---------------------------------------------------------------------------
-	// Step: demo — Try your first meditation session
+	// Step: Features (value proposition showcase)
 	// ---------------------------------------------------------------------------
 
-	if (step === "demo") {
-		// --- Sub-step: intro ---
-		if (demoSubStep === "intro") {
-			return (
-				<View style={styles.root}>
-					<ProgressDots steps={orderedSteps} current="demo" />
-					<View style={styles.centeredContent}>
-						<View style={styles.demoIconContainer}>
-							<MaterialCommunityIcons
-								name="meditation"
-								size={64}
-								color={colors.primary}
-							/>
-						</View>
-						<Text variant="headlineMedium" style={styles.demoIntroTitle}>
-							Try the Unmatch experience
-						</Text>
-						<Text variant="bodyLarge" style={styles.demoIntroSubtitle}>
-							Unmatch provides meditation sessions and journaling assistance to help you manage your dating app impulses. Let's try it out together.
-						</Text>
-					</View>
-					<View style={styles.bottomActions}>
-						<Button
-							mode="contained"
-							onPress={startDemoBreathing}
-							style={styles.primaryButton}
-							contentStyle={styles.primaryButtonContent}
-							labelStyle={styles.primaryButtonLabel}
-							testID="demo-start-breathing"
-						>
-							Start meditation session
-						</Button>
-						<Button
-							mode="text"
-							onPress={skipDemoBreathing}
-							textColor={colors.muted}
-							testID="demo-skip-breathing"
-						>
-							Skip
-						</Button>
-					</View>
-				</View>
-			);
-		}
+	if (step === "features") {
+		return (
+			<View style={styles.root}>
+				<ProgressDots steps={STEPS} current="features" />
+				<BackButton onPress={goBack} />
+				<ScrollView
+					style={styles.scroll}
+					contentContainerStyle={styles.scrollContent}
+					showsVerticalScrollIndicator={false}
+				>
+					<Text variant="headlineMedium" style={styles.stepTitle}>
+						Control your dating app urges with Unmatch
+					</Text>
+					<Text variant="bodyLarge" style={styles.featuresSubtitle}>
+						Unmatch gives you real tools — not just advice.
+					</Text>
 
-		// --- Sub-step: breathing ---
-		if (demoSubStep === "breathing") {
-			return (
-				<View style={styles.root}>
-					<ProgressDots steps={orderedSteps} current="demo" />
-					<ScrollView
-						style={styles.scroll}
-						contentContainerStyle={styles.scrollContent}
-						showsVerticalScrollIndicator={false}
+					<View style={styles.featureCardList}>
+						{FEATURE_SHOWCASES.map((feature) => (
+							<Surface
+								key={feature.title}
+								style={styles.featureCard}
+								elevation={1}
+							>
+								<View
+									style={[
+										styles.featureCardIcon,
+										{ backgroundColor: `${feature.color}18` },
+									]}
+								>
+									<MaterialCommunityIcons
+										name={
+											feature.icon as keyof typeof MaterialCommunityIcons.glyphMap
+										}
+										size={28}
+										color={feature.color}
+									/>
+								</View>
+								<View style={styles.featureCardText}>
+									<Text variant="titleMedium" style={styles.featureCardTitle}>
+										{feature.title}
+									</Text>
+									<Text variant="bodySmall" style={styles.featureCardDesc}>
+										{feature.description}
+									</Text>
+								</View>
+							</Surface>
+						))}
+					</View>
+				</ScrollView>
+				<View style={styles.bottomActions}>
+					<Button
+						mode="contained"
+						onPress={() => {
+							setStep("ready");
+						}}
+						style={styles.primaryButton}
+						contentStyle={styles.primaryButtonContent}
+						labelStyle={styles.primaryButtonLabel}
+						testID="features-continue"
 					>
-						<View style={styles.demoBreathingHeader}>
-							<Text variant="labelLarge" style={styles.demoBreathingLabel}>
-								MANAGE THE SWIPE URGE
-							</Text>
-							<Text variant="headlineSmall" style={styles.stepTitle}>
-								Follow the breathing guide
-							</Text>
-						</View>
+						Continue
+					</Button>
+				</View>
+			</View>
+		);
+	}
 
-						<BreathingExercise
-							timeLeft={demoTimeLeft}
-							totalDuration={DEMO_BREATHING_SECONDS}
+	// ---------------------------------------------------------------------------
+	// Step: Ready (personalized CTA)
+	// ---------------------------------------------------------------------------
+
+	if (step === "ready") {
+		return (
+			<View style={styles.root}>
+				<ProgressDots steps={STEPS} current="ready" />
+				<BackButton onPress={goBack} />
+				<View style={styles.centeredContent}>
+					<View style={styles.readyIconContainer}>
+						<MaterialCommunityIcons
+							name="rocket-launch-outline"
+							size={64}
+							color={colors.primary}
 						/>
-					</ScrollView>
-					<View style={styles.bottomActions}>
-						<Button
-							mode="text"
-							onPress={skipDemoBreathing}
-							textColor={colors.muted}
-							accessibilityLabel="Skip breathing and continue"
-							testID="demo-skip-mid"
-						>
-							Skip
-						</Button>
 					</View>
+					<Text variant="headlineMedium" style={styles.readyTitle}>
+						You're all set.
+					</Text>
+					<Text variant="bodyLarge" style={styles.readyBody}>
+						{selectedGoal !== null
+							? GOAL_AFFIRMATIONS[selectedGoal]
+							: "Small wins add up."}
+					</Text>
+					<Text variant="bodyMedium" style={styles.readyDetail}>
+						Your 7-day starter course to reduce your dating app usage begins today. We'll send you a nudge each
+						evening to keep you on track.
+					</Text>
 				</View>
-			);
-		}
-
-		// --- Sub-step: action ---
-		if (demoSubStep === "action") {
-			// Pick all non-spend actions from catalog for the activity options
-			const demoActions = catalog.actions.filter(
-				(a) => a.action_type !== "spend" && a.action_type !== "boundary",
-			);
-
-			return (
-				<View style={styles.root}>
-					<ProgressDots steps={orderedSteps} current="demo" />
-					<ScrollView
-						style={styles.scroll}
-						contentContainerStyle={styles.scrollContent}
-						showsVerticalScrollIndicator={false}
+				<View style={styles.bottomActions}>
+					<Button
+						mode="contained"
+						onPress={() => {
+							void handleStart();
+						}}
+						loading={isSubmitting}
+						disabled={isSubmitting}
+						style={styles.primaryButton}
+						contentStyle={styles.primaryButtonContent}
+						labelStyle={styles.primaryButtonLabel}
+						testID="ready-continue"
 					>
-						<Text variant="headlineMedium" style={styles.stepTitle}>
-							One more step
-						</Text>
-						<Text variant="bodyMedium" style={styles.stepSubtitle}>
-							After breathing, pick something to do instead. Here are your options:
-						</Text>
-
-						<View style={styles.demoActionList}>
-							{demoActions.map((action) => (
-								<Surface key={action.id} style={styles.demoActionCard} elevation={2}>
-									<View style={styles.demoActionHeader}>
-										<Text variant="titleSmall" style={styles.demoActionTitle}>
-											{action.title}
-										</Text>
-										<Text variant="labelSmall" style={styles.demoActionTimeBadge}>
-											{Math.round(action.est_seconds / 60)} min
-										</Text>
-									</View>
-									<Text variant="bodySmall" style={styles.demoActionBody}>
-										{action.body}
-									</Text>
-								</Surface>
-							))}
-						</View>
-
-						<Surface style={styles.demoTagline} elevation={1}>
-							<Text variant="bodyMedium" style={styles.demoTaglineText}>
-								That's what Unmatch does. 60 seconds to take back control.
-							</Text>
-						</Surface>
-					</ScrollView>
-					<View style={styles.bottomActions}>
-						<Button
-							mode="contained"
-							onPress={() => {
-								setDemoSubStep("checkin");
-							}}
-							style={styles.primaryButton}
-							contentStyle={styles.primaryButtonContent}
-							labelStyle={styles.primaryButtonLabel}
-							testID="demo-action-done"
-						>
-							I did it
-						</Button>
-					</View>
+						{isSubmitting ? "Setting up..." : "Start my pause"}
+					</Button>
 				</View>
-			);
-		}
-
-		// --- Sub-step: checkin ---
-		if (demoSubStep === "checkin") {
-			const checkinReady = demoMood > 0 && demoFatigue > 0 && demoUrge > 0;
-
-			return (
-				<View style={styles.root}>
-					<ProgressDots steps={orderedSteps} current="demo" />
-					<ScrollView
-						style={styles.scroll}
-						contentContainerStyle={styles.scrollContent}
-						showsVerticalScrollIndicator={false}
-					>
-						<Text variant="headlineMedium" style={styles.stepTitle}>
-							Daily check-in
-						</Text>
-						<Text variant="bodyMedium" style={styles.stepSubtitle}>
-							Just for you — no right answers.
-						</Text>
-
-						<Card style={styles.checkinCard} mode="contained">
-							<Card.Content style={styles.checkinCardContent}>
-								<RatingChips
-									label="Mood"
-									value={demoMood}
-									onChange={setDemoMood}
-									labelMap={MOOD_LABELS}
-									subtitle="How are you feeling right now?"
-								/>
-								<Divider style={styles.checkinDivider} />
-								<RatingChips
-									label="Fatigue"
-									value={demoFatigue}
-									onChange={setDemoFatigue}
-									labelMap={FATIGUE_LABELS}
-								/>
-								<Divider style={styles.checkinDivider} />
-								<RatingChips
-									label="Urge level"
-									value={demoUrge}
-									onChange={setDemoUrge}
-									labelMap={URGE_LABELS}
-								/>
-							</Card.Content>
-						</Card>
-
-						<Card style={styles.checkinCard} mode="contained">
-							<Card.Content style={styles.checkinCardContent}>
-								<View style={styles.checkinYesNoRow}>
-									<Text variant="labelLarge" style={styles.checkinLabel}>
-										Opened a dating app late at night?
-									</Text>
-									<View style={styles.checkinChipRow}>
-										<Chip
-											selected={demoOpenedAtNight === true}
-											onPress={() => { setDemoOpenedAtNight(true); }}
-											style={[styles.checkinToggleChip, demoOpenedAtNight === true && styles.checkinYesSelected]}
-											textStyle={[styles.checkinToggleText, demoOpenedAtNight === true && styles.checkinToggleTextSelected]}
-											compact
-										>
-											Yes
-										</Chip>
-										<Chip
-											selected={demoOpenedAtNight === false}
-											onPress={() => { setDemoOpenedAtNight(false); }}
-											style={[styles.checkinToggleChip, demoOpenedAtNight === false && styles.checkinNoSelected]}
-											textStyle={[styles.checkinToggleText, demoOpenedAtNight === false && styles.checkinToggleTextSelected]}
-											compact
-										>
-											No
-										</Chip>
-									</View>
-								</View>
-								<Divider style={styles.checkinDivider} />
-								<View style={styles.checkinYesNoRow}>
-									<Text variant="labelLarge" style={styles.checkinLabel}>
-										Spent money on dating today?
-									</Text>
-									<View style={styles.checkinChipRow}>
-										<Chip
-											selected={demoSpentToday === true}
-											onPress={() => { setDemoSpentToday(true); }}
-											style={[styles.checkinToggleChip, demoSpentToday === true && styles.checkinYesSelected]}
-											textStyle={[styles.checkinToggleText, demoSpentToday === true && styles.checkinToggleTextSelected]}
-											compact
-										>
-											Yes
-										</Chip>
-										<Chip
-											selected={demoSpentToday === false}
-											onPress={() => { setDemoSpentToday(false); }}
-											style={[styles.checkinToggleChip, demoSpentToday === false && styles.checkinNoSelected]}
-											textStyle={[styles.checkinToggleText, demoSpentToday === false && styles.checkinToggleTextSelected]}
-											compact
-										>
-											No
-										</Chip>
-									</View>
-								</View>
-							</Card.Content>
-						</Card>
-
-						<Text variant="bodySmall" style={styles.checkinPrivacyNote}>
-							Check-ins are stored locally and never shared.
-						</Text>
-					</ScrollView>
-					<View style={styles.bottomActions}>
-						<Button
-							mode="contained"
-							onPress={() => {
-								setDemoSubStep("nicework");
-							}}
-							disabled={!checkinReady}
-							style={styles.primaryButton}
-							contentStyle={styles.primaryButtonContent}
-							labelStyle={styles.primaryButtonLabel}
-							testID="demo-checkin-continue"
-						>
-							Save my reflection
-						</Button>
-					</View>
-				</View>
-			);
-		}
-
-		// --- Sub-step: nicework ---
-		// Auto-transitions to paywall after 1.5 seconds after save completes
-		return (
-			<DemoNiceWork
-				isSubmitting={isSubmitting}
-				onReady={() => {
-					void handleStart();
-				}}
-			/>
+			</View>
 		);
 	}
 
 	// Fallback — should not be reached
 	return <View style={styles.root} />;
-}
-
-// ---------------------------------------------------------------------------
-// DemoNiceWork — confirmation screen before paywall
-// ---------------------------------------------------------------------------
-
-interface DemoNiceWorkProps {
-	isSubmitting: boolean;
-	onReady: () => void;
-}
-
-function DemoNiceWork({
-	isSubmitting,
-	onReady,
-}: DemoNiceWorkProps): React.ReactElement {
-	const calledRef = useRef(false);
-	const onReadyRef = useRef(onReady);
-	onReadyRef.current = onReady;
-
-	useEffect(() => {
-		if (calledRef.current) return;
-		calledRef.current = true;
-
-		// 1.5-second pause then transition
-		const timeout = setTimeout(() => {
-			onReadyRef.current();
-		}, 1_500);
-
-		return () => {
-			clearTimeout(timeout);
-		};
-	}, []);
-
-	return (
-		<View style={styles.root}>
-			<View style={styles.centeredContent}>
-				<View style={styles.niceworkIconContainer}>
-					<MaterialCommunityIcons
-						name="check-circle-outline"
-						size={80}
-						color={colors.success}
-						accessibilityLabel="Success"
-					/>
-				</View>
-				<Text variant="headlineMedium" style={styles.niceworkTitle}>
-					Nice work.
-				</Text>
-				<Text variant="bodyLarge" style={styles.niceworkBody}>
-					You just completed a meditation session and saw your daily check-in. That's the core of Unmatch.
-				</Text>
-				{isSubmitting && (
-					<Text variant="bodySmall" style={styles.niceworkLoading}>
-						Setting up your account...
-					</Text>
-				)}
-			</View>
-		</View>
-	);
 }
 
 // ---------------------------------------------------------------------------
@@ -1102,7 +505,18 @@ const styles = StyleSheet.create({
 	progressDotDone: {
 		backgroundColor: colors.secondary,
 	},
+	// Back button
+	backButtonRow: {
+		paddingHorizontal: 8,
+		paddingBottom: 4,
+	},
+	backButton: {
+		alignSelf: "flex-start",
+	},
 	// Welcome
+	welcomeSafeArea: {
+		height: Platform.OS === "ios" ? 56 : 36,
+	},
 	centeredContent: {
 		flex: 1,
 		alignItems: "center",
@@ -1131,7 +545,7 @@ const styles = StyleSheet.create({
 	},
 	scrollContent: {
 		paddingHorizontal: 20,
-		paddingTop: 20,
+		paddingTop: 12,
 		paddingBottom: 16,
 		gap: 16,
 	},
@@ -1192,235 +606,72 @@ const styles = StyleSheet.create({
 		fontStyle: "italic",
 		marginTop: 4,
 	},
-	// Triggers
-	chipGrid: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: 8,
-	},
-	triggerChip: {
-		backgroundColor: colors.surface,
-		borderColor: colors.border,
-		borderWidth: 1,
-	},
-	triggerChipSelected: {
-		backgroundColor: "#0F1D3A",
-		borderColor: colors.primary,
-	},
-	triggerChipText: {
+	// Features showcase
+	featuresSubtitle: {
 		color: colors.muted,
-	},
-	triggerChipTextSelected: {
-		color: colors.primary,
-	},
-	// Budget
-	fieldLabel: {
-		color: colors.text,
-		marginBottom: 4,
-		marginTop: 8,
-	},
-	segmented: {
+		lineHeight: 24,
 		marginBottom: 4,
 	},
-	textInput: {
-		backgroundColor: colors.surface,
-	},
-	// Notifications
-	notifCard: {
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
-		overflow: "hidden",
-	},
-	notifCardSelected: {
-		borderColor: colors.primary,
-		backgroundColor: "#0F1D3A",
-	},
-	courseToggleRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-		padding: 16,
+	featureCardList: {
 		gap: 12,
 	},
-	courseToggleText: {
+	featureCard: {
+		borderRadius: 14,
+		borderWidth: 1,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
+		flexDirection: "row",
+		padding: 16,
+		gap: 14,
+		alignItems: "flex-start",
+	},
+	featureCardIcon: {
+		width: 48,
+		height: 48,
+		borderRadius: 14,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	},
+	featureCardText: {
 		flex: 1,
 		gap: 4,
 	},
-	toggleChip: {
-		backgroundColor: colors.surface,
-		borderColor: colors.border,
-		borderWidth: 1,
+	featureCardTitle: {
+		color: colors.text,
+		fontWeight: "600",
 	},
-	toggleChipSelected: {
-		backgroundColor: "#0F1D3A",
-		borderColor: colors.primary,
+	featureCardDesc: {
+		color: colors.muted,
+		lineHeight: 20,
 	},
-	// Demo intro
-	demoIconContainer: {
+	// Ready
+	readyIconContainer: {
 		width: 120,
 		height: 120,
 		borderRadius: 60,
 		backgroundColor: "#0F1D3A",
 		alignItems: "center",
 		justifyContent: "center",
-		marginBottom: 8,
-	},
-	demoIntroTitle: {
-		color: colors.text,
-		fontWeight: "700",
-		textAlign: "center",
-	},
-	demoIntroSubtitle: {
-		color: colors.muted,
-		textAlign: "center",
-		lineHeight: 26,
-	},
-	// Demo breathing
-	demoBreathingHeader: {
-		gap: 6,
-		marginBottom: 8,
-	},
-	demoBreathingLabel: {
-		color: colors.primary,
-		textTransform: "uppercase",
-		letterSpacing: 1,
-	},
-	// Demo action list
-	demoActionList: {
-		gap: 10,
-	},
-	// Demo action card
-	demoActionCard: {
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-		padding: 16,
-		gap: 6,
-	},
-	demoActionHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: 8,
-	},
-	demoActionTitle: {
-		color: colors.text,
-		fontWeight: "700",
-		flex: 1,
-	},
-	demoActionTimeBadge: {
-		color: colors.primary,
-		backgroundColor: "#0F1D3A",
-		borderRadius: 6,
-		paddingHorizontal: 8,
-		paddingVertical: 2,
-		overflow: "hidden",
-		fontSize: 11,
-		fontWeight: "600",
-	},
-	demoActionBody: {
-		color: colors.muted,
-		lineHeight: 20,
-	},
-	// Demo tagline
-	demoTagline: {
-		backgroundColor: "#0F1D3A",
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.primary,
-		padding: 20,
-	},
-	demoTaglineText: {
-		color: colors.text,
-		fontStyle: "italic",
-		textAlign: "center",
-		lineHeight: 24,
-	},
-	// Checkin interactive flow
-	checkinCard: {
-		backgroundColor: colors.surface,
-		borderRadius: 14,
-		borderWidth: 1,
-		borderColor: colors.border,
-	},
-	checkinCardContent: {
-		paddingVertical: 4,
-		gap: 2,
-	},
-	checkinDivider: {
-		backgroundColor: colors.border,
-	},
-	checkinYesNoRow: {
-		paddingVertical: 12,
-		gap: 10,
-	},
-	checkinLabel: {
-		color: colors.text,
-		fontWeight: "500",
-	},
-	checkinChipRow: {
-		flexDirection: "row",
-		gap: 8,
-		flexWrap: "wrap",
-	},
-	checkinToggleChip: {
-		backgroundColor: colors.background,
-		borderColor: colors.border,
-		borderWidth: 1,
-		minWidth: 44,
-	},
-	checkinYesSelected: {
-		backgroundColor: "#1A3D2E",
-		borderColor: colors.success,
-	},
-	checkinNoSelected: {
-		backgroundColor: "#1A1220",
-		borderColor: "#E05A5A",
-	},
-	checkinToggleText: {
-		color: colors.muted,
-	},
-	checkinToggleTextSelected: {
-		color: colors.text,
-		fontWeight: "600",
-	},
-	checkinPrivacyNote: {
-		color: colors.muted,
-		textAlign: "center",
-		lineHeight: 18,
-	},
-	// Nice work screen
-	niceworkIconContainer: {
-		width: 140,
-		height: 140,
-		borderRadius: 70,
-		backgroundColor: "#1A3D2E",
-		alignItems: "center",
-		justifyContent: "center",
 		marginBottom: 16,
 	},
-	niceworkTitle: {
+	readyTitle: {
 		color: colors.text,
 		fontWeight: "700",
 		textAlign: "center",
 	},
-	niceworkBody: {
-		color: colors.muted,
+	readyBody: {
+		color: colors.secondary,
 		textAlign: "center",
+		fontSize: 18,
+		fontStyle: "italic",
 		lineHeight: 26,
 	},
-	niceworkLoading: {
+	readyDetail: {
 		color: colors.muted,
 		textAlign: "center",
-		marginTop: 12,
-		fontStyle: "italic",
+		lineHeight: 24,
+		paddingHorizontal: 8,
 	},
 	// Shared bottom actions
 	bottomActions: {

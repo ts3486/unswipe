@@ -28,7 +28,7 @@ interface FeatureItem {
 }
 
 const FEATURES: FeatureItem[] = [
-	{ icon: "timer-outline", label: "60-second panic reset — anytime, offline" },
+	{ icon: "timer-outline", label: "60-second meditation — anytime, offline" },
 	{ icon: "clipboard-check-outline", label: "Daily check-in — private self-reflection" },
 	{ icon: "credit-card-off-outline", label: "Spend delay cards — think before you boost" },
 	{ icon: "book-open-variant", label: "7-day starter course — learn the patterns" },
