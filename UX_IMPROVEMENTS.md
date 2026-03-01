@@ -83,8 +83,8 @@ Tapping the CTA enrolls the user and loads day 1.
 **Fix:** On first launch after onboarding, show a lightweight guided overlay (coach marks) pointing to the 3 key areas:
 
 1. **Check-in card:** "Start here each day — a quick private reflection"
-2. **Resist Rank:** "Your rank grows as you resist urges"
-3. **Resist button:** "Tap this whenever you feel the pull"
+2. **Meditation Rank:** "Your rank grows as you meditate through urges"
+3. **Meditate button:** "Tap this whenever you feel the pull"
 
 Dismiss on tap-anywhere. Show only once (persist a `has_seen_tour` flag).
 

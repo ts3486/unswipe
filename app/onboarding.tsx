@@ -89,7 +89,7 @@ const FEATURE_SHOWCASES: FeatureShowcase[] = [
 		icon: "chart-timeline-variant",
 		title: "Progress you can see",
 		description:
-			"Track your streaks, see which days you resisted, and watch your Resist Rank climb as you build the habit.",
+			"Track your streaks, see which days you resisted, and watch your Meditation Rank climb as you build the habit.",
 		color: colors.success,
 	},
 	{

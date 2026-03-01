@@ -40,27 +40,20 @@ The main gaps are: purchase flow not wired to RevenueCat, no subscription sync o
 
 ### 4. Update SPEC.md to match confirmed model
 - Change one-time $6.99 references → monthly $4.99 + 7-day free trial
-- Update "Resist Rank" → "Meditation Rank" throughout
+- ~~Update "Resist Rank" → "Meditation Rank" throughout~~ (DONE)
 - Remove "1 free panic reset" gating references
 - Clarify: `isPremium` is the single gate, covers trial + paid
 - Files: `SPEC.md`
 
 ---
 
-## Missing Home Screen Features
+## Home Screen Features (Resolved)
 
-### 5. Add TimeSaved counter to Home (`app/(tabs)/index.tsx`)
-- `src/components/TimeSavedCard.tsx` exists but is NOT rendered
-- **Fix**: Import and render in home scroll content
-- Needs: weekly meditation count (from `useWeeklySuccessCount` hook)
-
-### 6. Add Daily Motivation card to Home (`app/(tabs)/index.tsx`)
-- `src/components/MotivationCard.tsx` exists but is NOT rendered
-- **Fix**: Import and render in home scroll content
-
-### 7. Add stat cards (streak, meditation count) to Home (`app/(tabs)/index.tsx`)
-- `StatCard` sub-component defined at line 164-188 but never used in render
-- **Fix**: Add stat row with streak + meditation count using existing `StatCard`
+### 5–7. TimeSaved, MotivationCard, StatCards — REMOVED
+These were added in commit `b4455ed` and subsequently removed. The Home screen now shows:
+Logo, Privacy Badge, inline check-in, course card, Meditation Rank, and Meditate CTA.
+Components `MotivationCard.tsx`, `TimeSavedCard.tsx`, and hook `useWeeklySuccessCount.ts` have been deleted.
+The `TIME_SAVED_PER_MEDITATION_MINUTES` constant has been removed from `config.ts`.
 
 ---
 

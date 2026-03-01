@@ -44,7 +44,7 @@ Use Apple/Google's auto-generated regional price tiers. Consider a lower tier ($
 1. **60-second panic reset** — not a 30-day program to start
 2. **Works offline, no account** — nothing to leak, nothing to explain
 3. **Spend delay cards** — catches impulsive IAP before it happens
-4. **Resist Rank** — quiet gamification that builds over time
+4. **Meditation Rank** — quiet gamification that builds over time
 5. **Stealth notifications** — no one sees "dating app help" on your phone
 
 ---

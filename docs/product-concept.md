@@ -36,7 +36,7 @@ Typical user signals:
 3. Completes a 60-second breathing protocol
 4. Chooses a short coping action (1–15 min, from a preset catalog)
 5. Logs the outcome — did they resist, give in, or is it still ongoing?
-6. Their Resist Rank increases with each successful resist
+6. Their Meditation Rank increases with each successful meditation
 
 This loop is the core of the app. Everything else supports it.
 
@@ -45,7 +45,7 @@ This loop is the core of the app. Everything else supports it.
 - **Daily check-in** — mood, fatigue, and urge levels (1–5 scale), plus optional flags for night opens and spending. Private notes stay on-device only.
 - **7-day starter course** — short daily lessons that build awareness (triggers, notifications, bedtime boundaries, spending patterns, habit replacement). Content is preset and ships with the app.
 - **Progress tracking** — calendar view of success days, streak counter, weekly stats (success rate, panic outcomes, urge trends, spend avoided). A day counts as successful if the user resisted at least one urge OR completed a daily task.
-- **Resist Rank** — a visual representation of cumulative progress. Starts at level 1, gains a level for every 5 successful resists, capped at 30. Never decreases. Simple, motivating, no gamification tricks.
+- **Meditation Rank** — a visual representation of cumulative progress. Starts at level 1, gains a level for every 5 successful meditations, capped at 30. Never decreases. Simple, motivating, no gamification tricks.
 
 ### Spend-specific flow
 
@@ -70,7 +70,7 @@ All data stays on-device in V1. No backend, no cloud sync, no accounts. Spend am
 The reset flow works without an internet connection. The entire app works offline. No loading spinners, no server dependencies.
 
 ### Non-coercive
-No forced lockouts, no guilt trips, no shame mechanics. The app helps when the user asks for help. A failed reset is logged without judgment. The Resist Rank never decreases. Progress is cumulative.
+No forced lockouts, no guilt trips, no shame mechanics. The app helps when the user asks for help. A failed reset is logged without judgement. The Meditation Rank never decreases. Progress is cumulative.
 
 ### Preset-only content
 Triggers, coping actions, spend categories, and course content are all preset — shipped as seed data, not user-generated. This keeps the experience consistent, avoids moderation issues, and ensures privacy (no free-text in analytics). The only free-text field is the daily check-in note, which never leaves the device.
@@ -91,14 +91,14 @@ Architecture follows a clean layered pattern: domain rules (pure functions) → 
 
 ## What's built (V1)
 
-- Onboarding (goal selection, trigger picklist, optional budget, notification preferences)
-- Home tab (Resist Rank, streak, resist count, daily card, reset CTA)
+- Onboarding (streamlined 4-step flow: Welcome → Personalize → Features → Ready)
+- Home tab (Meditation Rank, inline check-in, course card, Privacy Badge, Meditate CTA)
 - Panic tab (6-step reset protocol with breathing, action selection, outcome logging)
 - Progress tab (calendar, weekly stats, streak tracking)
 - Learn tab (7-day starter course with day-locked progression)
 - Settings tab (notification style, privacy controls)
 - Daily check-in (mood/fatigue/urge scales, optional night-open and spend flags)
-- Paywall scaffold (subscription model ready for RevenueCat integration)
+- Paywall (RevenueCat connected — $4.99/month + 7-day free trial, purchase + restore flows)
 - Analytics framework (typed events, no-op adapter, privacy enforced at the type level)
 - Full test suite (domain rules, repositories, seed integrity, forbidden wording scan)
 
@@ -115,13 +115,12 @@ Architecture follows a clean layered pattern: domain rules (pure functions) → 
 
 ## Monetization
 
-Freemium model with a subscription paywall. The core reset flow is free. Premium unlocks additional features (TBD — likely extended analytics, additional courses, customization). RevenueCat integration is scaffolded but not yet connected.
+Subscription model: $4.99/month with a 7-day free trial, powered by RevenueCat. `isPremium` is the single gate — true during active trial or paid subscription, false when trial expires or subscription lapses. Non-premium users are redirected to the paywall. Subscription status syncs with the App Store on every app foreground, with a 3-day offline grace period.
 
 ## Roadmap considerations
 
 ### Near-term
 - Connect analytics adapter (Firebase)
-- Implement paywall with RevenueCat
 - App Store + Google Play submission
 - Localization framework
 

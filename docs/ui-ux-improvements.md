@@ -134,7 +134,7 @@ Replace or supplement the timer text with an expanding/contracting circle animat
 ### 4.3 Outcome Screen Enhancement
 After logging "I resisted":
 - Show confetti or a subtle particle animation (one-time, not looping)
-- Display updated Resist Rank if it leveled up
+- Display updated Meditation Rank if it leveled up
 - Show "Share your streak" button (see Section 8)
 
 ---
@@ -200,7 +200,7 @@ Sunday evening notification:
 ### 8.1 Share Streak Card
 Generate a shareable image card showing:
 - "I've been Unmatched for [X] days"
-- Resist Rank badge
+- Meditation Rank badge
 - Urges resisted count
 - Branded with Unmatch logo + App Store link
 - Dark theme matching app design

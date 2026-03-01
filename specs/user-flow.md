@@ -15,31 +15,30 @@ isOnboarded?
 
 ## Onboarding (`/onboarding`)
 
-Linear step-based flow (state-driven, not separate routes).
+Streamlined 4-step flow (state-driven, not separate routes).
 
 ```
 WELCOME
   │  "Get started"
   ▼
-GOAL
-  │  Select one: Reduce swipe / Open less / Stop night check / Spend less
+PERSONALIZE
+  │  Select one goal: Reduce swipe / Open less / Stop night check / Spend less
+  │  Continue disabled until a goal is selected
   │  "Continue"
   ▼
-TRIGGERS
-  │  Multi-select trigger patterns (optional)
+FEATURES
+  │  4 value-prop cards (guided exercises, smart reminders, progress tracking, 7-day course)
   │  "Continue"
   ▼
-BUDGET  ◄── only shown if goal = "Spend less"
-  │  Period (daily/weekly) + Amount + Mode (soft reminder / personal pledge)
-  │  "Continue" or "Skip for now"
+READY
+  │  Personalized affirmation + course/notification preview
+  │  "Start my pause"
+  │  → Requests notification permission
   ▼
-NOTIFICATIONS
-  │  Style: Stealth / Normal / Off
-  │  Toggle: Enable 7-day starter course
-  │  "Begin"
-  ▼
-router.replace('/(tabs)')  →  Home tab
+/paywall (trial offer)  →  /(tabs)/home
 ```
+
+Back navigation on steps 2–4. Progress dots across all steps. Budget setup deferred to post-onboarding. Notification preference defaults to "on" (changeable in Settings).
 
 **On completion:** creates `user_profile`, sets `isOnboarded = true`, fires `onboarding_completed`.
 
@@ -59,22 +58,22 @@ Five tabs available after onboarding. Late-night pulse animation (21:00–02:59)
 
 ## Home (`/(tabs)/home`)
 
-Dashboard showing resist rank progress, daily stats, and motivation.
+Dashboard showing Meditation Rank, daily check-in, and course content.
 
 **Elements:**
-- Resist Rank visualisation (rank 1–30)
-- Streak counter (consecutive success days)
-- Resist count (total lifetime resists)
-- Daily check-in card
-- Today's course content (if 7-day course enabled)
-- Sticky bottom CTA: "Reset now"
+- Logo + "Today done" chip (when day is successful)
+- Privacy Badge — shield icon + "100% offline" label
+- Inline daily check-in card
+- Today's course card (day X of 7)
+- Meditation Rank display (rank level + meditation count)
+- Sticky bottom CTA: "Meditate" (label from catalog copy)
 
 **Navigation out:**
 
 | Action | Destination |
 |---|---|
-| Tap check-in card | `/checkin` |
-| Tap "Reset now" | `/(tabs)/panic` |
+| Tap check-in card | Expands check-in overlay |
+| Tap "Meditate" CTA | `/(tabs)/panic` |
 
 ---
 
@@ -177,8 +176,10 @@ Private daily self-reflection form accessed from Home.
 ## Settings (`/(tabs)/settings`)
 
 **Inline controls (no navigation):**
-- App lock toggle
-- Notification style selector (Normal → Stealth → Off)
+- Notification style toggle (Normal / Off)
+- "Why We Charge" expandable section
+- "Unlock Unmatch" row (visible for non-premium users)
+- Trial/subscription status display
 
 **Navigation out:**
 
@@ -186,7 +187,7 @@ Private daily self-reflection form accessed from Home.
 |---|---|---|
 | Blocker guide | `/settings/blocker-guide` | Stack push |
 | Privacy and data | `/settings/privacy` | Stack push |
-| Manage subscription | `/paywall` | Modal |
+| Unlock Unmatch | `/paywall` | Stack push |
 
 Footer: "All data stays on your device — always."
 
@@ -208,13 +209,18 @@ Static help content with iOS Screen Time and Android Digital Wellbeing setup ste
 
 ## Paywall (`/paywall`)
 
-Modal screen for subscription management.
+Screen for subscription management. Two modes based on context.
 
-**Content:**
-- Premium features list (detailed analytics, extended courses, smart reminders, data export)
-- Monthly: $4.99/mo
-- Yearly: $29.99/yr (Save 50%)
-- Subscribe / Restore purchases buttons (stubs in V1)
+**Trial offer mode** (post-onboarding):
+- "Try 7 Days for Free" CTA → auto-renews to $4.99/month
+- Feature list with icons, trust signals
+
+**Trial expired mode** (conversion):
+- Subscribe $4.99/month CTA
+- Restore purchase link
+- Feature list with icons, price comparison callout, trust signals
+
+Connected to RevenueCat — real purchase flow via `purchasePackage()`, restore via `restorePurchases()`.
 
 Fires `paywall_viewed` on mount.
 
@@ -225,24 +231,23 @@ Fires `paywall_viewed` on mount.
 | From | Action | To | Method |
 |---|---|---|---|
 | App start (not onboarded) | Auto-redirect | `/onboarding` | `<Redirect>` |
-| Onboarding step 5 | "Begin" | `/(tabs)` | `router.replace` |
-| Home | "Reset now" | `/(tabs)/panic` | `router.push` |
-| Home | Check-in card | `/checkin` | `router.push` |
-| Check-in | Back | Home | `router.back` |
+| Onboarding Ready step | "Start my pause" | `/paywall` → `/(tabs)` | `router.replace` |
+| Home | "Meditate" CTA | `/(tabs)/panic` | `router.push` |
+| Home | Check-in card | Check-in overlay | Internal state |
 | Panic complete | "Done" | Home | `router.replace` |
 | Panic complete | "Go again" | Panic step 1 | Internal state reset |
 | Progress | Tap day | `/progress/day/[date]` | `router.push` |
 | Day detail | Back | Progress | Header back |
 | Settings | Blocker guide | `/settings/blocker-guide` | `router.push` |
 | Settings | Privacy and data | `/settings/privacy` | `router.push` |
-| Settings | Manage subscription | `/paywall` | `router.push` (modal) |
+| Settings | Unlock Unmatch | `/paywall` | `router.push` |
 
 ---
 
 ## Domain Rules Affecting Flow
 
 - **Success day:** `panic_success_count >= 1` OR `daily_task_completed`. Once success occurs that day, later fails don't remove it.
-- **Resist Rank:** +1 rank every 5 successful resists. Never decreases. Cap 30.
+- **Meditation Rank:** +1 rank every 5 successful meditations. Never decreases. Cap 30.
 - **Day boundary:** device local timezone midnight.
 - **Urge kinds (preset-only):** swipe, check, spend.
 - **Spend categories (preset-only):** iap, date, gift, tipping, transport, other.

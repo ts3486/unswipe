@@ -14,10 +14,6 @@ export const MEDITATION_RANK_CAP = 30 as const;
 /** Number of successful meditations required to advance one rank. */
 export const MEDITATION_RANK_PER_LEVEL = 5 as const;
 
-// Life Tree uses the same progression constants as Meditation Rank.
-export const LIFE_TREE_CAP = MEDITATION_RANK_CAP;
-export const LIFE_TREE_MEDITATION_PER_LEVEL = MEDITATION_RANK_PER_LEVEL;
-
 // ---------------------------------------------------------------------------
 // Breathing exercise timings (seconds)
 // ---------------------------------------------------------------------------
