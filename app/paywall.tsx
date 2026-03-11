@@ -44,7 +44,7 @@ const FEATURES: FeatureItem[] = [
 
 export default function PaywallScreen(): React.ReactElement {
 	const analytics = useAnalytics();
-	const { hasEverSubscribed, refreshPremiumStatus } = useAppState();
+	const { isPremium, hasEverSubscribed, refreshPremiumStatus } = useAppState();
 	const { db } = useDatabaseContext();
 
 	const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
@@ -52,6 +52,13 @@ export default function PaywallScreen(): React.ReactElement {
 
 	const isTrialOffer = !hasEverSubscribed;
 	const triggerSource = isTrialOffer ? "trial_offer" : "trial_expired";
+
+	// Navigate to tabs once premium state is confirmed in React context
+	useEffect(() => {
+		if (isPremium) {
+			router.replace("/(tabs)");
+		}
+	}, [isPremium]);
 
 	// Fire paywall_viewed on mount.
 	useEffect(() => {
@@ -66,23 +73,30 @@ export default function PaywallScreen(): React.ReactElement {
 		setIsPurchasing(true);
 		setFeedbackMessage(null);
 		try {
+			console.log("[Paywall] Fetching offerings...");
 			const offering = await getOfferings();
+			console.log("[Paywall] Offering:", JSON.stringify(offering, null, 2));
 			if (!offering || !offering.monthly) {
+				console.log("[Paywall] No monthly package found in offering");
 				setFeedbackMessage(
 					"Unable to load subscription options. Please try again.",
 				);
 				return;
 			}
+			console.log("[Paywall] Purchasing package:", offering.monthly.product.identifier);
 			const customerInfo = await purchasePackage(offering.monthly);
+			console.log("[Paywall] CustomerInfo:", JSON.stringify(customerInfo, null, 2));
 			await syncSubscriptionToDb(db, customerInfo);
+			console.log("[Paywall] Synced to DB");
 			await refreshPremiumStatus();
+			console.log("[Paywall] Refreshed premium status");
 			const productId = offering.monthly.product.identifier;
 			analytics.track({
 				name: "purchase_completed",
 				props: { product_id: productId, period: "monthly" },
 			});
-			router.replace("/(tabs)");
 		} catch (err: unknown) {
+			console.log("[Paywall] Purchase error:", JSON.stringify(err, null, 2));
 			const isCancelled =
 				err !== null &&
 				typeof err === "object" &&
@@ -106,9 +120,7 @@ export default function PaywallScreen(): React.ReactElement {
 			const customerInfo = await restorePurchases();
 			await syncSubscriptionToDb(db, customerInfo);
 			await refreshPremiumStatus();
-			if (isPremiumFromCustomerInfo(customerInfo)) {
-				router.replace("/(tabs)");
-			} else {
+			if (!isPremiumFromCustomerInfo(customerInfo)) {
 				setFeedbackMessage("No previous purchases found.");
 			}
 		} catch {

@@ -35,7 +35,7 @@ export const BREATHING_EXHALE = 6 as const;
 // ---------------------------------------------------------------------------
 
 /** RevenueCat API key for iOS. Replace before release. */
-export const REVENUECAT_API_KEY_IOS = "test_diqJjNMNWatOpFJPcwkJKOvxtpu";
+export const REVENUECAT_API_KEY_IOS = "appl_WJnyhNFNbsAVeHJmlijEhEepExo";
 
 /** RevenueCat API key for Android. Replace before release. */
 export const REVENUECAT_API_KEY_ANDROID = "TODO_REPLACE_WITH_ANDROID_KEY";
