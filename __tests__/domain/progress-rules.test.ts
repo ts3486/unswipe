@@ -8,6 +8,7 @@ import {
 	isDaySuccess,
 	shouldIncrementMeditation,
 	shouldIncrementSpendAvoided,
+	subtractOneDay,
 } from "@/src/domain/progress-rules";
 
 // ---------------------------------------------------------------------------
@@ -248,5 +249,23 @@ describe("shouldIncrementSpendAvoided", () => {
 
 	it("returns false for swipe urge with fail outcome", () => {
 		expect(shouldIncrementSpendAvoided("swipe", "fail")).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// subtractOneDay
+// ---------------------------------------------------------------------------
+
+describe("subtractOneDay", () => {
+	it("subtracts a day within the same month", () => {
+		expect(subtractOneDay("2026-02-18")).toBe("2026-02-17");
+	});
+
+	it("crosses a month boundary", () => {
+		expect(subtractOneDay("2026-02-01")).toBe("2026-01-31");
+	});
+
+	it("crosses a year boundary", () => {
+		expect(subtractOneDay("2026-01-01")).toBe("2025-12-31");
 	});
 });

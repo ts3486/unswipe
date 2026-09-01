@@ -22,12 +22,6 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Privacy Badge — shield icon + "100% offline" label
 - Sticky bottom "Reset" CTA
 
-### /(tabs)/panic
-- State machine: select_urge → breathing → select_action → spend_delay (if spend) → log_outcome → complete
-- Haptic feedback — light pulses on inhale/exhale start (expo-haptics)
-- Visual breathing guide — expanding/contracting circle animation (4s inhale, 2s hold, 6s exhale), blue gradient #4C8DFF → #7AA7FF
-- Outcome screen — confetti animation on success, Meditation Rank level-up display, "Share your streak" button
-
 ### /(tabs)/progress
 - Monthly calendar with success-day highlighting
 - Weekly comparison card
@@ -104,6 +98,8 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Gender-neutral, inclusive language (maintained)
 
 ## Changelog
+- 2026-09-01: Deleted the dead panic/reset state machine — `src/hooks/usePanicFlow.ts` (zero importers) and `app/(tabs)/panic.tsx` (a redirect-only stub, itself unreferenced by any deep link, notification, or in-app navigation) — plus its hidden tab registration in `app/(tabs)/_layout.tsx`. Removed the `/(tabs)/panic` entries from CLAUDE.md and SPEC.md. This was already fully unreachable code (the reset flow has lived inline on Home for a while); deleting it changes no runtime behavior. Note: as a side effect, `createUrgeEvent`, `upsertProgress`, `shouldIncrementMeditation`, and `shouldIncrementSpendAvoided` now have zero live callers too (their only caller was the deleted hook) — the `progress` table (and therefore Meditation Rank, never displayed on Home either) has had no write path for some time. Left in place pending a decision on whether to revive or fully remove that subsystem.
+- 2026-09-01: Fixed the streak-preservation notification, which was never firing — it read `appState.streak` (today-inclusive, so it's always 0 before today's check-in, exactly when the nudge needs to fire). Added `subtractOneDay` (exported from `progress-rules.ts`) and a new `streakBeforeToday` value in `AppStateContext`, computed as the streak ending yesterday; `rescheduleAll`'s `AppStateForNotifications.streak` field was renamed to `streakBeforeToday` and now receives this value instead. The Home badge's `streak` (today-inclusive) is unchanged. Confirmed the panic/reset state machine (`usePanicFlow`, `/panic` route) is dead code — the flow now lives entirely on the Home tab's embedded breathing exercise, which never logs `urge_event` rows — so "panic-only successes" can't occur in the current app and don't need to feed streak calculations.
 - 2026-09-01: Unified streak calculation — added `calculateLongestStreak` to `src/domain/progress-rules.ts` and switched the Progress tab's `loadBestStreak` to reuse it plus the existing `calculateStreak`, replacing a duplicated, untested inline algorithm that used slightly different (grace-period) semantics than the Home badge and streak notifications. Also simplified the day-detail check-in display to show the selected option label (e.g. "Great") instead of a numeric score with dots, and removed the meditated/did-not-meditate/ongoing summary badges from that screen as no longer necessary.
 - 2026-09-01: Removed the Learn tab and 7-day starter course entirely — deleted the `content`/`content_progress` tables, `content-repository.ts`, `useContent` hook, `starter_7d.json`/`.ja.json` seed files, the course-unlock notification, and the `content_viewed`/`content_completed` analytics events. Added a `/(tabs)/history` tab showing a scrollable list of past daily check-ins (linking into the existing `/progress/day/[date]` detail screen). Redefined `daily_task_completed` to mean "today's daily check-in exists" instead of "today's course content completed."
 - 2026-08-01: Made the app completely free — removed the `isPremium` gate from `(tabs)/_layout.tsx`, dropped the onboarding→paywall redirect (Ready CTA now goes straight to Home), removed the "Unlock Unmatch"/"Why We Charge" rows from Settings, and stopped RevenueCat SDK init/foreground sync on app launch. Kept `/paywall` screen, `subscription-service.ts`, `subscription-repository.ts`, and the `subscription_state` table in place, unused, for a future freemium feature.

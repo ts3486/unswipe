@@ -47,7 +47,6 @@ Spend categories (preset-only)
 ## Required Routes (expo-router)
 - /onboarding
 - /(tabs)/home
-- /(tabs)/panic
 - /(tabs)/progress
 - /(tabs)/history
 - /(tabs)/settings
@@ -56,7 +55,7 @@ Spend categories (preset-only)
 - /settings/privacy
 - /progress/day/[date]
 
-Panic must be a dedicated tab.
+The reset/breathing flow lives inline on Home, not a dedicated panic tab or route.
 
 ## Analytics Events (exact)
 (Use the same exact event names/props from the main spec.)

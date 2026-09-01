@@ -46,8 +46,6 @@ export default function TabsLayout(): React.ReactElement {
 					),
 				}}
 			/>
-			{/* Hidden route — keeps /(tabs)/panic valid for deep links */}
-			<Tabs.Screen name="panic" options={{ href: null }} />
 			<Tabs.Screen
 				name="progress"
 				options={{

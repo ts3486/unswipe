@@ -43,8 +43,13 @@ import { PaperProvider } from "react-native-paper";
 // ---------------------------------------------------------------------------
 
 function InnerLayout(): React.ReactElement {
-	const { userProfile, streak, todaySuccess, meditationCount, isOnboarded } =
-		useAppState();
+	const {
+		userProfile,
+		streakBeforeToday,
+		todaySuccess,
+		meditationCount,
+		isOnboarded,
+	} = useAppState();
 	const analytics = useAnalytics();
 	const router = useRouter();
 	const { t } = useTranslation();
@@ -58,7 +63,7 @@ function InnerLayout(): React.ReactElement {
 
 		// Schedule on mount / every time relevant state changes.
 		void rescheduleAll(userProfile, {
-			streak,
+			streakBeforeToday,
 			todaySuccess,
 			meditationCount,
 		});
@@ -75,7 +80,7 @@ function InnerLayout(): React.ReactElement {
 				if (wasBackground && isActive) {
 					if (userProfile !== null) {
 						void rescheduleAll(userProfile, {
-							streak,
+							streakBeforeToday,
 							todaySuccess,
 							meditationCount,
 						});
@@ -89,7 +94,13 @@ function InnerLayout(): React.ReactElement {
 		return () => {
 			subscription.remove();
 		};
-	}, [isOnboarded, userProfile, streak, todaySuccess, meditationCount]);
+	}, [
+		isOnboarded,
+		userProfile,
+		streakBeforeToday,
+		todaySuccess,
+		meditationCount,
+	]);
 
 	// Handle notification taps — track analytics and navigate to the correct screen.
 	useEffect(() => {

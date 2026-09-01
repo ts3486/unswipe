@@ -390,7 +390,14 @@ export async function scheduleDailyMotivation(
 // ---------------------------------------------------------------------------
 
 interface AppStateForNotifications {
-	streak: number;
+	/**
+	 * The streak as of yesterday — i.e. the run that is still "at risk"
+	 * until today's check-in happens. Must NOT be the today-inclusive
+	 * streak: this scheduler runs before today's check-in exists, so a
+	 * today-inclusive streak would always read 0 here, and the nudge
+	 * could never fire.
+	 */
+	streakBeforeToday: number;
 	todaySuccess: boolean;
 	meditationCount: number;
 }
@@ -425,7 +432,11 @@ export async function rescheduleAll(
 	await Promise.all([
 		scheduleDailyMotivation(style),
 		scheduleEveningNudge(style, appState.todaySuccess),
-		scheduleStreakNudge(appState.streak, appState.todaySuccess, style),
+		scheduleStreakNudge(
+			appState.streakBeforeToday,
+			appState.todaySuccess,
+			style,
+		),
 		scheduleWeeklySummary(appState.meditationCount, minutesSaved, style),
 	]);
 }

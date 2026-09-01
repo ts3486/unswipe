@@ -84,7 +84,7 @@ export function calculateStreak(dates: string[], today: string): number {
  * Subtract exactly one calendar day from a YYYY-MM-DD string.
  * Uses UTC arithmetic on the date components to avoid DST drift.
  */
-function subtractOneDay(dateLocal: string): string {
+export function subtractOneDay(dateLocal: string): string {
 	const [yearStr, monthStr, dayStr] = dateLocal.split("-");
 	const year = Number.parseInt(yearStr, 10);
 	const month = Number.parseInt(monthStr, 10) - 1; // Date months are 0-indexed
