@@ -2,6 +2,11 @@
 // Shows all urge events for a given date and the daily check-in if present.
 // TypeScript strict mode.
 
+import {
+	useFatigueLabels,
+	useMoodLabels,
+	useUrgeLabels,
+} from "@/src/components/RatingChips";
 import { colors } from "@/src/constants/theme";
 import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
 import { getCheckinByDate, getUrgeEventsByDate } from "@/src/data/repositories";
@@ -30,6 +35,10 @@ export default function DayDetailScreen(): React.ReactElement {
 	const [checkin, setCheckin] = useState<DailyCheckin | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
+	const moodLabels = useMoodLabels();
+	const fatigueLabels = useFatigueLabels();
+	const urgeLabels = useUrgeLabels();
+
 	const dateStr = date ?? "";
 
 	const load = useCallback(async (): Promise<void> => {
@@ -52,14 +61,6 @@ export default function DayDetailScreen(): React.ReactElement {
 	useEffect(() => {
 		void load();
 	}, [load]);
-
-	// ---------------------------------------------------------------------------
-	// Summary stats
-	// ---------------------------------------------------------------------------
-
-	const successCount = urgeEvents.filter((e) => e.outcome === "success").length;
-	const failCount = urgeEvents.filter((e) => e.outcome === "fail").length;
-	const ongoingCount = urgeEvents.filter((e) => e.outcome === "ongoing").length;
 
 	// ---------------------------------------------------------------------------
 	// Helpers
@@ -123,7 +124,9 @@ export default function DayDetailScreen(): React.ReactElement {
 		>
 			{/* Date header */}
 			<Text variant="titleLarge" style={styles.dateTitle}>
-				{dateStr.length > 0 ? formatDateLabel(dateStr) : t("dayDetail.unknownDate")}
+				{dateStr.length > 0
+					? formatDateLabel(dateStr)
+					: t("dayDetail.unknownDate")}
 			</Text>
 
 			{isLoading ? (
@@ -132,25 +135,6 @@ export default function DayDetailScreen(): React.ReactElement {
 				</View>
 			) : (
 				<>
-					{/* Summary stats */}
-					<View style={styles.summaryRow}>
-						<SummaryBadge
-							count={successCount}
-							label={t("dayDetail.meditated")}
-							color={colors.success}
-						/>
-						<SummaryBadge
-							count={failCount}
-							label={t("dayDetail.didNotMeditate")}
-							color="#E05A5A"
-						/>
-						<SummaryBadge
-							count={ongoingCount}
-							label={t("dayDetail.ongoing")}
-							color={colors.muted}
-						/>
-					</View>
-
 					{/* Check-in card */}
 					{checkin !== null && (
 						<>
@@ -159,11 +143,26 @@ export default function DayDetailScreen(): React.ReactElement {
 							</Text>
 							<Card style={styles.card} mode="contained">
 								<Card.Content style={styles.checkinContent}>
-									<CheckinRow label={t("checkin.mood")} value={checkin.mood} />
+									<CheckinRow
+										label={t("checkin.mood")}
+										valueLabel={
+											moodLabels[checkin.mood] ?? String(checkin.mood)
+										}
+									/>
 									<Divider style={styles.divider} />
-									<CheckinRow label={t("checkin.fatigue")} value={checkin.fatigue} />
+									<CheckinRow
+										label={t("checkin.fatigue")}
+										valueLabel={
+											fatigueLabels[checkin.fatigue] ?? String(checkin.fatigue)
+										}
+									/>
 									<Divider style={styles.divider} />
-									<CheckinRow label={t("checkin.urgeLevel")} value={checkin.urge} />
+									<CheckinRow
+										label={t("checkin.urgeLevel")}
+										valueLabel={
+											urgeLabels[checkin.urge] ?? String(checkin.urge)
+										}
+									/>
 									{checkin.opened_at_night !== null && (
 										<>
 											<Divider style={styles.divider} />
@@ -280,53 +279,21 @@ export default function DayDetailScreen(): React.ReactElement {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function SummaryBadge({
-	count,
-	label,
-	color,
-}: {
-	count: number;
-	label: string;
-	color: string;
-}): React.ReactElement {
-	return (
-		<View style={[styles.summaryBadge, { borderColor: color }]}>
-			<Text variant="headlineSmall" style={[styles.summaryCount, { color }]}>
-				{count}
-			</Text>
-			<Text variant="labelSmall" style={styles.summaryLabel}>
-				{label}
-			</Text>
-		</View>
-	);
-}
-
 function CheckinRow({
 	label,
-	value,
+	valueLabel,
 }: {
 	label: string;
-	value: number;
+	valueLabel: string;
 }): React.ReactElement {
 	return (
 		<View style={styles.checkinRow}>
 			<Text variant="bodyMedium" style={styles.muted}>
 				{label}
 			</Text>
-			<View style={styles.ratingDots}>
-				{[1, 2, 3, 4, 5].map((i) => (
-					<View
-						key={i}
-						style={[
-							styles.ratingDot,
-							i <= value ? styles.ratingDotFilled : styles.ratingDotEmpty,
-						]}
-					/>
-				))}
-				<Text variant="bodyMedium" style={styles.valueText}>
-					{value}/5
-				</Text>
-			</View>
+			<Text variant="bodyMedium" style={styles.valueText}>
+				{valueLabel}
+			</Text>
 		</View>
 	);
 }
@@ -354,27 +321,6 @@ const styles = StyleSheet.create({
 		color: colors.text,
 		fontWeight: "700",
 	},
-	summaryRow: {
-		flexDirection: "row",
-		gap: 10,
-	},
-	summaryBadge: {
-		flex: 1,
-		borderRadius: 12,
-		borderWidth: 1,
-		backgroundColor: colors.surface,
-		alignItems: "center",
-		paddingVertical: 12,
-		paddingHorizontal: 8,
-		gap: 4,
-	},
-	summaryCount: {
-		fontWeight: "700",
-	},
-	summaryLabel: {
-		color: colors.muted,
-		textAlign: "center",
-	},
 	sectionTitle: {
 		color: colors.text,
 		fontWeight: "600",
@@ -395,22 +341,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		paddingVertical: 10,
 		gap: 12,
-	},
-	ratingDots: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 4,
-	},
-	ratingDot: {
-		width: 8,
-		height: 8,
-		borderRadius: 4,
-	},
-	ratingDotFilled: {
-		backgroundColor: colors.primary,
-	},
-	ratingDotEmpty: {
-		backgroundColor: colors.border,
 	},
 	divider: {
 		backgroundColor: colors.border,

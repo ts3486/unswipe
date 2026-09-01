@@ -62,12 +62,12 @@ export default function TabsLayout(): React.ReactElement {
 				}}
 			/>
 			<Tabs.Screen
-				name="learn"
+				name="history"
 				options={{
-					title: "Learn",
+					title: "History",
 					tabBarIcon: ({ color, size }) => (
 						<MaterialCommunityIcons
-							name="book-open-variant"
+							name="calendar-check-outline"
 							color={color}
 							size={size}
 						/>

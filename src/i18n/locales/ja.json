@@ -137,16 +137,12 @@
 		"noData": "この日の記録はありません。",
 		"urgeKind": { "swipe": "スワイプ", "check": "チェック", "spend": "課金" }
 	},
-	"learn": {
-		"title": "7日間スターターコース",
-		"subtitle": "より健康的な習慣を築くための、やさしい毎日の実践。",
-		"minutes": "{{count}}分",
-		"dayCardA11y": "{{day}}日目: {{title}}",
-		"notYetAvailable": "まだ利用できません",
-		"tapToExpand": "タップして展開",
-		"practice": "実践",
-		"markComplete": "完了にする",
-		"completed": "完了"
+	"history": {
+		"title": "チェックイン履歴",
+		"subtitle": "これまでの毎日のチェックインをまとめて確認できます。",
+		"empty": "まだチェックインがありません。ホームから今日のチェックインを完了すると、履歴がここに表示されます。",
+		"summaryLine": "気分: {{mood}} ・ 疲労: {{fatigue}} ・ 衝動: {{urge}}",
+		"rowA11y": "{{date}}のチェックイン"
 	},
 	"blockerGuide": {
 		"title": "マッチングアプリへのアクセスを制限する方法",
@@ -201,7 +197,6 @@
 		"importUrgeEvents": "衝動イベント {{count}}件",
 		"importCheckins": "チェックイン {{count}}件",
 		"importProgress": "進捗記録 {{count}}件",
-		"importContentProgress": "コース完了 {{count}}件",
 		"importProfile": "プロフィール {{count}}件",
 		"importSubscription": "サブスクリプション記録 {{count}}件"
 	},
@@ -256,14 +251,12 @@
 			}
 		],
 		"streakNudgeBody": "連続記録を途切れさせないで!今日のチェックインを、日付が変わる前に済ませましょう。",
-		"courseUnlockBody": "新しいレッスンが利用可能になりました。進捗を続けるために、チェックしてみましょう!",
 		"eveningNudgeTitle": "衝動を感じていますか? アプリを開いて、60秒のリセットをしましょう。",
 		"eveningNudgeBody": "Unmatchを開いて、60秒のリセットをしましょう。",
 		"streakStillGoingTitle": "{{days}}日連続の記録が続いています。",
 		"keepItAlive": "このまま続けて、連続記録を途切れさせないようにしましょう。",
 		"weeklySummaryTitle": "今週の振り返り",
-		"weeklySummaryBody": "今週:瞑想を{{count}}回完了、{{minutes}}分を節約しました。進捗を確認しましょう。",
-		"courseUnlockStarterBody": "スターターコースに新しいレッスンが追加されました。"
+		"weeklySummaryBody": "今週:瞑想を{{count}}回完了、{{minutes}}分を節約しました。進捗を確認しましょう。"
 	},
 	"breathing": {
 		"affirmations": [

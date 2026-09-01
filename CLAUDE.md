@@ -49,7 +49,7 @@ Spend categories (preset-only)
 - /(tabs)/home
 - /(tabs)/panic
 - /(tabs)/progress
-- /(tabs)/learn
+- /(tabs)/history
 - /(tabs)/settings
 - /paywall
 - /settings/blocker-guide

@@ -108,6 +108,20 @@ export async function getCheckinsInRange(
 }
 
 /**
+ * Returns all check-ins ordered by date_local descending (newest first).
+ * Used to power the check-in history list.
+ */
+export async function getAllCheckins(
+	db: SQLiteDatabase,
+): Promise<DailyCheckin[]> {
+	const rows = await db.getAllAsync<DailyCheckinRow>(
+		"SELECT * FROM daily_checkin ORDER BY date_local DESC;",
+	);
+
+	return rows.map(rowToCheckin);
+}
+
+/**
  * Returns all distinct date_local values from the daily_checkin table,
  * ordered ascending. Used for streak calculation based on check-ins.
  */

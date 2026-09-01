@@ -12,15 +12,7 @@
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const catalog = require("@/data/seed/catalog.json") as Record<string, unknown>;
-const starterCourse = require("@/data/seed/starter_7d.json") as Record<
-	string,
-	unknown
->;
 const catalogJa = require("@/data/seed/catalog.ja.json") as Record<
-	string,
-	unknown
->;
-const starterCourseJa = require("@/data/seed/starter_7d.ja.json") as Record<
 	string,
 	unknown
 >;
@@ -85,30 +77,12 @@ function collectCatalogText(
 	return texts.filter(Boolean);
 }
 
-function collectStarterCourseText(
-	source: Record<string, unknown> = starterCourse,
-): string[] {
-	const texts: string[] = [];
-	const days = source.days as Array<{
-		title: string;
-		body: string;
-		actionText: string;
-	}>;
-	for (const d of days) {
-		texts.push(d.title, d.body, d.actionText);
-	}
-	return texts.filter(Boolean);
-}
-
 function allSeedText(): string {
-	return [...collectCatalogText(), ...collectStarterCourseText()].join("\n");
+	return collectCatalogText().join("\n");
 }
 
 function allSeedTextJa(): string {
-	return [
-		...collectCatalogText(catalogJa),
-		...collectStarterCourseText(starterCourseJa),
-	].join("\n");
+	return collectCatalogText(catalogJa).join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -203,39 +177,6 @@ describe("Forbidden wording scan — catalog.json", () => {
 	});
 });
 
-describe("Forbidden wording scan — starter_7d.json", () => {
-	let courseText: string;
-
-	beforeAll(() => {
-		courseText = collectStarterCourseText().join("\n");
-	});
-
-	it("contains no explicit sexual wording", () => {
-		const match = courseText.match(SEXUAL_WORDING_PATTERN);
-		expect(match).toBeNull();
-	});
-
-	it("contains no cure/treatment claims", () => {
-		const match = courseText.match(CURE_TREATMENT_PATTERN);
-		expect(match).toBeNull();
-	});
-
-	it("contains no perfect blocking claims", () => {
-		const match = courseText.match(PERFECT_BLOCKING_PATTERN);
-		expect(match).toBeNull();
-	});
-
-	it("contains no relationship/dating coaching claims", () => {
-		const match = courseText.match(DATING_COACHING_PATTERN);
-		expect(match).toBeNull();
-	});
-
-	it("contains no forced lockout language", () => {
-		const match = courseText.match(FORCED_LOCKOUT_PATTERN);
-		expect(match).toBeNull();
-	});
-});
-
 describe("Forbidden wording scan — all seed text combined", () => {
 	it("passes all forbidden-wording checks end-to-end", () => {
 		const text = allSeedText();
@@ -276,39 +217,6 @@ describe("Forbidden wording scan — catalog.ja.json", () => {
 
 	it("contains no forced lockout language", () => {
 		const match = catalogText.match(FORCED_LOCKOUT_PATTERN_JA);
-		expect(match).toBeNull();
-	});
-});
-
-describe("Forbidden wording scan — starter_7d.ja.json", () => {
-	let courseText: string;
-
-	beforeAll(() => {
-		courseText = collectStarterCourseText(starterCourseJa).join("\n");
-	});
-
-	it("contains no explicit sexual wording", () => {
-		const match = courseText.match(SEXUAL_WORDING_PATTERN_JA);
-		expect(match).toBeNull();
-	});
-
-	it("contains no cure/treatment claims", () => {
-		const match = courseText.match(CURE_TREATMENT_PATTERN_JA);
-		expect(match).toBeNull();
-	});
-
-	it("contains no perfect blocking claims", () => {
-		const match = courseText.match(PERFECT_BLOCKING_PATTERN_JA);
-		expect(match).toBeNull();
-	});
-
-	it("contains no relationship/dating coaching claims", () => {
-		const match = courseText.match(DATING_COACHING_PATTERN_JA);
-		expect(match).toBeNull();
-	});
-
-	it("contains no forced lockout language", () => {
-		const match = courseText.match(FORCED_LOCKOUT_PATTERN_JA);
 		expect(match).toBeNull();
 	});
 });

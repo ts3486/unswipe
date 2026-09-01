@@ -52,12 +52,11 @@ describe("gatherExportData() — envelope shape", () => {
 		expect(envelope.app_version).toBe("1.0.0");
 	});
 
-	it("returns a tables key containing all 6 expected table names", async () => {
+	it("returns a tables key containing all 5 expected table names", async () => {
 		const db = createMockDb() as unknown as SQLiteDatabase;
 		const envelope = await gatherExportData(db);
 		const tableKeys = Object.keys(envelope.tables).sort();
 		expect(tableKeys).toEqual([
-			"content_progress",
 			"daily_checkins",
 			"progress",
 			"subscription_state",
@@ -90,12 +89,6 @@ describe("gatherExportData() — envelope shape", () => {
 		expect(Array.isArray(envelope.tables.progress)).toBe(true);
 	});
 
-	it("tables.content_progress is an array", async () => {
-		const db = createMockDb() as unknown as SQLiteDatabase;
-		const envelope = await gatherExportData(db);
-		expect(Array.isArray(envelope.tables.content_progress)).toBe(true);
-	});
-
 	it("tables.subscription_state is an array", async () => {
 		const db = createMockDb() as unknown as SQLiteDatabase;
 		const envelope = await gatherExportData(db);
@@ -108,10 +101,10 @@ describe("gatherExportData() — envelope shape", () => {
 // ---------------------------------------------------------------------------
 
 describe("gatherExportData() — database queries", () => {
-	it("calls db.getAllAsync exactly 6 times (one per table)", async () => {
+	it("calls db.getAllAsync exactly 5 times (one per table)", async () => {
 		const db = createMockDb() as unknown as SQLiteDatabase;
 		await gatherExportData(db);
-		expect(db.getAllAsync).toHaveBeenCalledTimes(6);
+		expect(db.getAllAsync).toHaveBeenCalledTimes(5);
 	});
 
 	it("queries SELECT * FROM user_profile", async () => {
@@ -146,16 +139,6 @@ describe("gatherExportData() — database queries", () => {
 		const calls = (db.getAllAsync as jest.Mock).mock.calls as [string][];
 		const sqls = calls.map(([sql]) => sql);
 		expect(sqls.some((s) => /SELECT \* FROM progress/i.test(s))).toBe(true);
-	});
-
-	it("queries SELECT * FROM content_progress", async () => {
-		const db = createMockDb() as unknown as SQLiteDatabase;
-		await gatherExportData(db);
-		const calls = (db.getAllAsync as jest.Mock).mock.calls as [string][];
-		const sqls = calls.map(([sql]) => sql);
-		expect(sqls.some((s) => /SELECT \* FROM content_progress/i.test(s))).toBe(
-			true,
-		);
 	});
 
 	it("queries SELECT * FROM subscription_state", async () => {
@@ -319,7 +302,6 @@ describe("gatherExportData() — row passthrough", () => {
 		expect(envelope.tables.urge_events).toEqual([]);
 		expect(envelope.tables.daily_checkins).toEqual([]);
 		expect(envelope.tables.progress).toEqual([]);
-		expect(envelope.tables.content_progress).toEqual([]);
 		expect(envelope.tables.subscription_state).toEqual([]);
 	});
 });
@@ -386,7 +368,7 @@ describe("exportToFile()", () => {
 		expect(parsed.version).toBe(1);
 	});
 
-	it("written JSON includes all 6 table keys", async () => {
+	it("written JSON includes all 5 table keys", async () => {
 		const db = createMockDb() as unknown as SQLiteDatabase;
 		await exportToFile(db);
 		const [, content] = (FileSystem.writeAsStringAsync as jest.Mock).mock
@@ -394,7 +376,6 @@ describe("exportToFile()", () => {
 		const parsed = JSON.parse(content) as ExportEnvelope;
 		const keys = Object.keys(parsed.tables).sort();
 		expect(keys).toEqual([
-			"content_progress",
 			"daily_checkins",
 			"progress",
 			"subscription_state",

@@ -98,6 +98,32 @@ function subtractOneDay(dateLocal: string): string {
 	return `${y}-${m}-${dd}`;
 }
 
+/**
+ * Calculate the longest run of consecutive success days anywhere in the
+ * given list (the all-time "personal best" streak), not just the run
+ * ending on a particular anchor date.
+ *
+ * @param dates - Array of YYYY-MM-DD strings that were success days.
+ *                Need not be sorted; duplicates are ignored.
+ * @returns Length of the longest consecutive run (0 for an empty list).
+ */
+export function calculateLongestStreak(dates: string[]): number {
+	const sorted = [...new Set(dates)].sort();
+
+	let longest = 0;
+	let current = 0;
+	let previous: string | null = null;
+
+	for (const date of sorted) {
+		current =
+			previous !== null && subtractOneDay(date) === previous ? current + 1 : 1;
+		longest = Math.max(longest, current);
+		previous = date;
+	}
+
+	return longest;
+}
+
 // ---------------------------------------------------------------------------
 // Counter increment guards
 // ---------------------------------------------------------------------------

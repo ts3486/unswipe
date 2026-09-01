@@ -6,9 +6,9 @@ import {
 	countSuccessesByDate,
 	createUserProfile,
 	getAllCheckinDates,
+	getCheckinByDate,
 	getLatestProgress,
 	getUserProfile,
-	hasContentCompletedOnDate,
 	updateUserProfile,
 } from "@/src/data/repositories";
 import {
@@ -17,7 +17,6 @@ import {
 	recordLifetimePurchase,
 	recordMonthlySubscription,
 } from "@/src/data/repositories/subscription-repository";
-import { reseedContentForLocale } from "@/src/data/seed-loader";
 import {
 	calculateMeditationRank,
 	calculateStreak,
@@ -136,9 +135,10 @@ export function AppStateProvider({
 		setStreak(calculateStreak(checkinDates, today));
 
 		// Today success: at least one panic success OR daily task completed.
+		// The daily task is today's check-in.
 		const panicSuccessCount = await countSuccessesByDate(db, today);
-		const dailyTaskCompleted = await hasContentCompletedOnDate(db, today);
-		setTodaySuccess(isDaySuccess(panicSuccessCount, dailyTaskCompleted));
+		const todaysCheckin = await getCheckinByDate(db, today);
+		setTodaySuccess(isDaySuccess(panicSuccessCount, todaysCheckin !== null));
 	}, [db]);
 
 	// ---------------------------------------------------------------------------
@@ -173,7 +173,6 @@ export function AppStateProvider({
 			if (userProfile === null) return;
 			await updateUserProfile(db, userProfile.id, { locale });
 			await i18n.changeLanguage(locale);
-			await reseedContentForLocale(db, locale);
 			await refreshProfile();
 		},
 		[db, userProfile, refreshProfile],

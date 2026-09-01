@@ -17,6 +17,10 @@ import {
 	getUrgeEventsInRange,
 } from "@/src/data/repositories";
 import type { DayOfWeekCount, TimeOfDayCount } from "@/src/data/repositories";
+import {
+	calculateLongestStreak,
+	calculateStreak,
+} from "@/src/domain/progress-rules";
 import { shareStreakCard } from "@/src/services/share";
 import { getDaysBetween, getLocalDateString } from "@/src/utils/date";
 import { format } from "date-fns";
@@ -270,50 +274,9 @@ export default function ProgressScreen(): React.ReactElement {
 	// ---------------------------------------------------------------------------
 
 	const loadBestStreak = useCallback(async (): Promise<void> => {
-		// Use check-in dates for streak calculation
-		const sortedDates = await getAllCheckinDates(db);
-
-		let longest = 0;
-		let current = 0;
-		let trailingCurrent = 0;
-
-		for (let i = 0; i < sortedDates.length; i++) {
-			if (i === 0) {
-				current = 1;
-			} else {
-				const prev = new Date(`${sortedDates[i - 1]}T00:00:00`);
-				const curr = new Date(`${sortedDates[i]}T00:00:00`);
-				const diffMs = curr.getTime() - prev.getTime();
-				const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-				if (diffDays === 1) {
-					current += 1;
-				} else {
-					current = 1;
-				}
-			}
-			if (current > longest) {
-				longest = current;
-			}
-			if (i === sortedDates.length - 1) {
-				trailingCurrent = current;
-			}
-		}
-
-		const lastDate = sortedDates[sortedDates.length - 1];
-		if (lastDate !== undefined) {
-			const lastMs = new Date(`${lastDate}T00:00:00`).getTime();
-			const todayMs = new Date(`${today}T00:00:00`).getTime();
-			const diffDays = Math.round((todayMs - lastMs) / (1000 * 60 * 60 * 24));
-			if (diffDays <= 1) {
-				setCurrentStreak(trailingCurrent);
-			} else {
-				setCurrentStreak(0);
-			}
-		} else {
-			setCurrentStreak(0);
-		}
-
-		setBestStreak(longest);
+		const checkinDates = await getAllCheckinDates(db);
+		setCurrentStreak(calculateStreak(checkinDates, today));
+		setBestStreak(calculateLongestStreak(checkinDates));
 	}, [db, today]);
 
 	// ---------------------------------------------------------------------------

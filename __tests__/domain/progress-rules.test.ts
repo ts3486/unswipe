@@ -2,6 +2,7 @@
 // Pure logic tests — no database, no async, no side effects.
 
 import {
+	calculateLongestStreak,
 	calculateMeditationRank,
 	calculateStreak,
 	isDaySuccess,
@@ -136,6 +137,69 @@ describe("calculateStreak", () => {
 	it("correctly crosses a year boundary", () => {
 		const dates = ["2025-12-31", "2026-01-01"];
 		expect(calculateStreak(dates, "2026-01-01")).toBe(2);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// calculateLongestStreak
+// ---------------------------------------------------------------------------
+
+describe("calculateLongestStreak", () => {
+	it("returns 0 for an empty list", () => {
+		expect(calculateLongestStreak([])).toBe(0);
+	});
+
+	it("returns 1 for a single date", () => {
+		expect(calculateLongestStreak(["2026-02-18"])).toBe(1);
+	});
+
+	it("returns the full length for one unbroken run", () => {
+		const dates = [
+			"2026-02-14",
+			"2026-02-15",
+			"2026-02-16",
+			"2026-02-17",
+			"2026-02-18",
+		];
+		expect(calculateLongestStreak(dates)).toBe(5);
+	});
+
+	it("returns the longest of multiple runs, not the trailing one", () => {
+		// Run of 4 (Jan 1-4), gap, run of 2 (Jan 10-11) — longest is 4.
+		const dates = [
+			"2026-01-01",
+			"2026-01-02",
+			"2026-01-03",
+			"2026-01-04",
+			"2026-01-10",
+			"2026-01-11",
+		];
+		expect(calculateLongestStreak(dates)).toBe(4);
+	});
+
+	it("returns the trailing run when it is the longest", () => {
+		const dates = ["2026-01-01", "2026-01-05", "2026-01-06", "2026-01-07"];
+		expect(calculateLongestStreak(dates)).toBe(3);
+	});
+
+	it("ignores duplicate dates", () => {
+		const dates = ["2026-02-17", "2026-02-17", "2026-02-18"];
+		expect(calculateLongestStreak(dates)).toBe(2);
+	});
+
+	it("handles unsorted input correctly", () => {
+		const dates = ["2026-02-18", "2026-02-16", "2026-02-17"];
+		expect(calculateLongestStreak(dates)).toBe(3);
+	});
+
+	it("correctly crosses a month boundary", () => {
+		const dates = ["2026-01-30", "2026-01-31", "2026-02-01"];
+		expect(calculateLongestStreak(dates)).toBe(3);
+	});
+
+	it("correctly crosses a year boundary", () => {
+		const dates = ["2025-12-31", "2026-01-01"];
+		expect(calculateLongestStreak(dates)).toBe(2);
 	});
 });
 

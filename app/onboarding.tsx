@@ -325,7 +325,7 @@ export default function OnboardingScreen(): React.ReactElement {
 			await completeOnboarding({
 				locale: i18n.language,
 				notification_style: "normal",
-				plan_selected: "starter_7d",
+				plan_selected: "default",
 				goal_type: "reduce_swipe",
 				spending_budget_weekly: null,
 				spending_budget_daily: null,

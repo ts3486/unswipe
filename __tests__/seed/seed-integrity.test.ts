@@ -1,20 +1,15 @@
-// Integrity tests for data/seed/catalog.json and data/seed/starter_7d.json.
+// Integrity tests for data/seed/catalog.json.
 //
 // These tests enforce the LOCKED constraints from CLAUDE.md:
 //   - Urge kinds: preset-only ('swipe' | 'check' | 'spend')
 //   - Spend categories: preset-only ('iap' | 'date' | 'gift' | 'tipping' | 'transport' | 'other')
 //   - spend_item_types: preset-only ('boost' | 'like_pack' | 'premium' | 'other')
-//   - starter_7d action_ids must reference real catalog actions
-//   - getCatalog() / getStarterCourse() mapper correctness
+//   - getCatalog() mapper correctness
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const catalog = require("@/data/seed/catalog.json") as Record<string, unknown>;
-const starterCourse = require("@/data/seed/starter_7d.json") as Record<
-	string,
-	unknown
->;
 
-import { getCatalog, getStarterCourse } from "@/src/data/seed-loader";
+import { getCatalog } from "@/src/data/seed-loader";
 import type {
 	SpendCategory,
 	SpendItemType,
@@ -205,62 +200,6 @@ describe("catalog.json spendDelayCards — action cross-reference", () => {
 });
 
 // ---------------------------------------------------------------------------
-// starter_7d.json raw structure
-// ---------------------------------------------------------------------------
-
-describe("starter_7d.json raw structure", () => {
-	it('has courseId "starter_7d"', () => {
-		expect(starterCourse.courseId).toBe("starter_7d");
-	});
-
-	it("has exactly 7 days", () => {
-		const days = starterCourse.days as unknown[];
-		expect(days).toHaveLength(7);
-	});
-
-	it("day indices are 1-based and run from 1 to 7 without gaps", () => {
-		const days = starterCourse.days as Array<{ dayIndex: number }>;
-		const indices = days.map((d) => d.dayIndex).sort((a, b) => a - b);
-		expect(indices).toEqual([1, 2, 3, 4, 5, 6, 7]);
-	});
-
-	it("all days have unique contentIds", () => {
-		const days = starterCourse.days as Array<{ contentId: string }>;
-		const ids = days.map((d) => d.contentId);
-		expect(new Set(ids).size).toBe(ids.length);
-	});
-
-	it("all days have non-empty title, body, and actionText", () => {
-		const days = starterCourse.days as Array<{
-			title: string;
-			body: string;
-			actionText: string;
-			estMinutes: number;
-		}>;
-		for (const d of days) {
-			expect(d.title.length).toBeGreaterThan(0);
-			expect(d.body.length).toBeGreaterThan(0);
-			expect(d.actionText.length).toBeGreaterThan(0);
-			expect(d.estMinutes).toBeGreaterThan(0);
-		}
-	});
-
-	it("every recommendedActionId in starter course references a real catalog action", () => {
-		const actions = catalog.actions as Array<{ id: string }>;
-		const actionIdSet = new Set(actions.map((a) => a.id));
-		const days = starterCourse.days as Array<{
-			recommendedActionIds: string[];
-		}>;
-
-		for (const day of days) {
-			for (const actionId of day.recommendedActionIds) {
-				expect(actionIdSet.has(actionId)).toBe(true);
-			}
-		}
-	});
-});
-
-// ---------------------------------------------------------------------------
 // getCatalog() mapped output
 // ---------------------------------------------------------------------------
 
@@ -313,54 +252,6 @@ describe("getCatalog() — mapped output", () => {
 
 		for (let i = 0; i < cat.spend_delay_cards.length; i++) {
 			expect(cat.spend_delay_cards[i].action_id).toBe(rawCards[i].ctaActionId);
-		}
-	});
-});
-
-// ---------------------------------------------------------------------------
-// getStarterCourse() mapped output
-// ---------------------------------------------------------------------------
-
-describe("getStarterCourse() — mapped output", () => {
-	it('course_id is "starter_7d"', () => {
-		const course = getStarterCourse();
-		expect(course.course_id).toBe("starter_7d");
-	});
-
-	it("has exactly 7 days", () => {
-		const course = getStarterCourse();
-		expect(course.days).toHaveLength(7);
-	});
-
-	it("maps dayIndex to day_index (snake_case)", () => {
-		const course = getStarterCourse();
-		const rawDays = starterCourse.days as Array<{ dayIndex: number }>;
-		for (let i = 0; i < course.days.length; i++) {
-			expect(course.days[i].day_index).toBe(rawDays[i].dayIndex);
-		}
-	});
-
-	it("maps recommendedActionIds to action_ids", () => {
-		const course = getStarterCourse();
-		const rawDays = starterCourse.days as Array<{
-			recommendedActionIds: string[];
-		}>;
-		for (let i = 0; i < course.days.length; i++) {
-			expect(course.days[i].action_ids).toEqual(
-				rawDays[i].recommendedActionIds,
-			);
-		}
-	});
-
-	it("maps actionText to action_text and estMinutes to est_minutes", () => {
-		const course = getStarterCourse();
-		const rawDays = starterCourse.days as Array<{
-			actionText: string;
-			estMinutes: number;
-		}>;
-		for (let i = 0; i < course.days.length; i++) {
-			expect(course.days[i].action_text).toBe(rawDays[i].actionText);
-			expect(course.days[i].est_minutes).toBe(rawDays[i].estMinutes);
 		}
 	});
 });
