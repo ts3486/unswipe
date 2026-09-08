@@ -33,7 +33,6 @@ export interface ExportEnvelope {
 		urge_events: unknown[];
 		daily_checkins: unknown[];
 		progress: unknown[];
-		content_progress: unknown[];
 		subscription_state: unknown[];
 	};
 }
@@ -63,21 +62,14 @@ const BACKUP_FILENAME = "unmatch-backup.json";
 export async function gatherExportData(
 	db: SQLiteDatabase,
 ): Promise<ExportEnvelope> {
-	const [
-		userProfile,
-		dailyCheckins,
-		urgeEvents,
-		progress,
-		contentProgress,
-		subscriptionState,
-	] = await Promise.all([
-		db.getAllAsync("SELECT * FROM user_profile"),
-		db.getAllAsync("SELECT * FROM daily_checkin"),
-		db.getAllAsync("SELECT * FROM urge_event"),
-		db.getAllAsync("SELECT * FROM progress"),
-		db.getAllAsync("SELECT * FROM content_progress"),
-		db.getAllAsync("SELECT * FROM subscription_state"),
-	]);
+	const [userProfile, dailyCheckins, urgeEvents, progress, subscriptionState] =
+		await Promise.all([
+			db.getAllAsync("SELECT * FROM user_profile"),
+			db.getAllAsync("SELECT * FROM daily_checkin"),
+			db.getAllAsync("SELECT * FROM urge_event"),
+			db.getAllAsync("SELECT * FROM progress"),
+			db.getAllAsync("SELECT * FROM subscription_state"),
+		]);
 
 	return {
 		version: 1,
@@ -88,7 +80,6 @@ export async function gatherExportData(
 			urge_events: urgeEvents,
 			daily_checkins: dailyCheckins,
 			progress: progress,
-			content_progress: contentProgress,
 			subscription_state: subscriptionState,
 		},
 	};

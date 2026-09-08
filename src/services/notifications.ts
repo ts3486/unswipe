@@ -120,26 +120,6 @@ export function buildWeeklySummaryContent(
 }
 
 // ---------------------------------------------------------------------------
-// Pure helper: course unlock content
-// ---------------------------------------------------------------------------
-
-/**
- * Returns notification content for a course unlock notification, or null
- * when style is 'off'.
- */
-export function buildCourseUnlockContent(
-	style: NotificationStyle,
-): NotificationContent | null {
-	if (style === "off") {
-		return null;
-	}
-	return {
-		title: i18n.t("common.appName"),
-		body: i18n.t("pushNotifications.courseUnlockStarterBody"),
-	};
-}
-
-// ---------------------------------------------------------------------------
 // Pure decision helpers
 // ---------------------------------------------------------------------------
 
@@ -171,23 +151,6 @@ export function shouldSendStreakNudge(
 		return false;
 	}
 	return !todaySuccess;
-}
-
-/**
- * Returns true when a course unlock notification should be scheduled.
- * Only notifies on days 2–7 when the user hasn't completed today's lesson.
- */
-export function shouldSendCourseUnlock(
-	currentDayIndex: number,
-	todayContentCompleted: boolean,
-): boolean {
-	if (currentDayIndex <= 1) {
-		return false;
-	}
-	if (currentDayIndex > 7) {
-		return false;
-	}
-	return !todayContentCompleted;
 }
 
 /**
@@ -349,47 +312,6 @@ export async function scheduleWeeklySummary(
 	});
 }
 
-/**
- * Schedules the course unlock notification for today at 8:00 AM.
- * Only fires on days 2–7 when the user hasn't completed today's lesson.
- */
-export async function scheduleCourseUnlock(
-	notificationStyle: NotificationStyle,
-	currentDayIndex: number,
-	todayContentCompleted: boolean,
-): Promise<void> {
-	if (!shouldSendCourseUnlock(currentDayIndex, todayContentCompleted)) {
-		return;
-	}
-
-	const content = buildCourseUnlockContent(notificationStyle);
-	if (content === null) {
-		return;
-	}
-
-	const now = new Date();
-	const trigger = new Date(now);
-	trigger.setHours(8, 0, 0, 0); // 8am local
-
-	// If 8 AM already passed today, skip.
-	if (trigger <= now) {
-		return;
-	}
-
-	await ExpoNotifications.scheduleNotificationAsync({
-		content: {
-			title: content.title,
-			body: content.body,
-			sound: true,
-		},
-		trigger: {
-			type: ExpoNotifications.SchedulableTriggerInputTypes.DATE,
-			date: trigger,
-		},
-		identifier: "course-unlock",
-	});
-}
-
 // ---------------------------------------------------------------------------
 // Side-effectful: daily motivation (morning + afternoon)
 // ---------------------------------------------------------------------------
@@ -468,11 +390,16 @@ export async function scheduleDailyMotivation(
 // ---------------------------------------------------------------------------
 
 interface AppStateForNotifications {
-	streak: number;
+	/**
+	 * The streak as of yesterday — i.e. the run that is still "at risk"
+	 * until today's check-in happens. Must NOT be the today-inclusive
+	 * streak: this scheduler runs before today's check-in exists, so a
+	 * today-inclusive streak would always read 0 here, and the nudge
+	 * could never fire.
+	 */
+	streakBeforeToday: number;
 	todaySuccess: boolean;
 	meditationCount: number;
-	currentDayIndex: number;
-	todayContentCompleted: boolean;
 }
 
 /**
@@ -505,12 +432,11 @@ export async function rescheduleAll(
 	await Promise.all([
 		scheduleDailyMotivation(style),
 		scheduleEveningNudge(style, appState.todaySuccess),
-		scheduleStreakNudge(appState.streak, appState.todaySuccess, style),
-		scheduleWeeklySummary(appState.meditationCount, minutesSaved, style),
-		scheduleCourseUnlock(
+		scheduleStreakNudge(
+			appState.streakBeforeToday,
+			appState.todaySuccess,
 			style,
-			appState.currentDayIndex,
-			appState.todayContentCompleted,
 		),
+		scheduleWeeklySummary(appState.meditationCount, minutesSaved, style),
 	]);
 }

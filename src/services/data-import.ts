@@ -22,7 +22,6 @@ const REQUIRED_TABLE_KEYS = [
 	"urge_events",
 	"daily_checkins",
 	"progress",
-	"content_progress",
 	"subscription_state",
 ] as const;
 
@@ -49,7 +48,6 @@ export interface ImportTableCounts {
 	urge_events: number;
 	daily_checkins: number;
 	progress: number;
-	content_progress: number;
 	subscription_state: number;
 }
 
@@ -62,7 +60,6 @@ const TABLE_NAME_MAP: Record<RequiredTableKey, string> = {
 	urge_events: "urge_event",
 	daily_checkins: "daily_checkin",
 	progress: "progress",
-	content_progress: "content_progress",
 	subscription_state: "subscription_state",
 };
 
@@ -77,7 +74,7 @@ const TABLE_NAME_MAP: Record<RequiredTableKey, string> = {
  *   1. Must be a plain object (not null, array, string, etc.)
  *   2. `version` must be exactly 1
  *   3. `tables` key must be present and be a plain object
- *   4. All 6 required table keys must be present and each value must be an array
+ *   4. All 5 required table keys must be present and each value must be an array
  *
  * @param json - The parsed (or unparsed) value from the import file.
  * @returns Counts of rows per table, suitable for a confirmation UI.
@@ -137,7 +134,7 @@ export function validateImportData(json: unknown): ImportTableCounts {
 
 	const tablesObj = tables as Record<string, unknown>;
 
-	// 4. All 6 required keys must be present and must be arrays.
+	// 4. All 5 required keys must be present and must be arrays.
 	for (const key of REQUIRED_TABLE_KEYS) {
 		if (!(key in tablesObj)) {
 			throw new Error(
@@ -158,7 +155,6 @@ export function validateImportData(json: unknown): ImportTableCounts {
 		urge_events: (tablesObj["urge_events"] as unknown[]).length,
 		daily_checkins: (tablesObj["daily_checkins"] as unknown[]).length,
 		progress: (tablesObj["progress"] as unknown[]).length,
-		content_progress: (tablesObj["content_progress"] as unknown[]).length,
 		subscription_state: (tablesObj["subscription_state"] as unknown[]).length,
 	};
 }

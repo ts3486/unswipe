@@ -108,28 +108,6 @@ export interface Progress {
 }
 
 /**
- * Mirrors content table.
- * Content items are read-only seed data loaded from starter_7d.json.
- */
-export interface Content {
-	content_id: string;
-	day_index: number;
-	title: string;
-	body: string;
-	action_text: string;
-	est_minutes: number;
-}
-
-/**
- * Mirrors content_progress table.
- * Tracks per-user completion of content items.
- */
-export interface ContentProgress {
-	content_id: string; // PK, FK -> content.content_id
-	completed_at: string; // ISO-8601 UTC
-}
-
-/**
  * Mirrors subscription_state table.
  * is_premium is true for lifetime purchases (status === 'lifetime') or active subscriptions.
  */
@@ -228,27 +206,3 @@ export interface Catalog {
 	motivation_messages: string[];
 }
 
-// ---------------------------------------------------------------------------
-// Seed data shapes (starter_7d.json)
-// ---------------------------------------------------------------------------
-
-/**
- * A single day entry in the starter course.
- * action_ids references CatalogAction.id values.
- */
-export interface StarterDay {
-	day_index: number; // 1-based
-	title: string;
-	body: string;
-	action_text: string;
-	est_minutes: number;
-	action_ids: string[];
-}
-
-/**
- * Root shape of data/seed/starter_7d.json.
- */
-export interface StarterCourse {
-	course_id: string;
-	days: StarterDay[];
-}

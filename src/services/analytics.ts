@@ -71,20 +71,6 @@ export type AnalyticsEvent =
 			};
 	  }
 	| {
-			name: "content_viewed";
-			props: {
-				content_id: string;
-				day_index: number;
-			};
-	  }
-	| {
-			name: "content_completed";
-			props: {
-				content_id: string;
-				day_index: number;
-			};
-	  }
-	| {
 			name: "paywall_viewed";
 			props: {
 				trigger_source: string;

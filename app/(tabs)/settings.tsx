@@ -218,7 +218,6 @@ export default function SettingsScreen(): React.ReactElement {
 													await db.runAsync("DELETE FROM daily_checkin;");
 													await db.runAsync("DELETE FROM urge_event;");
 													await db.runAsync("DELETE FROM progress;");
-													await db.runAsync("DELETE FROM content_progress;");
 													await refreshProfile();
 													router.replace("/onboarding");
 												})();

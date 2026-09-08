@@ -3,11 +3,9 @@
 // TypeScript strict mode.
 
 import { PersonalBestCard } from "@/src/components/PersonalBestCard";
-import { ShareStreakCard } from "@/src/components/ShareStreakCard";
 import { StreakRing } from "@/src/components/StreakRing";
 import { WeeklyInsightCard } from "@/src/components/WeeklyInsightCard";
 import { colors } from "@/src/constants/theme";
-import { useAppState } from "@/src/contexts/AppStateContext";
 import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
 import {
 	getAllCheckinDates,
@@ -17,15 +15,17 @@ import {
 	getUrgeEventsInRange,
 } from "@/src/data/repositories";
 import type { DayOfWeekCount, TimeOfDayCount } from "@/src/data/repositories";
-import { shareStreakCard } from "@/src/services/share";
+import {
+	calculateLongestStreak,
+	calculateStreak,
+} from "@/src/domain/progress-rules";
 import { getDaysBetween, getLocalDateString } from "@/src/utils/date";
 import { format } from "date-fns";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Divider, Text } from "react-native-paper";
-import ViewShot from "react-native-view-shot";
+import { Card, Divider, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -157,23 +157,7 @@ function WeekComparisonCard({
 export default function ProgressScreen(): React.ReactElement {
 	const { t } = useTranslation();
 	const { db } = useDatabaseContext();
-	const {
-		meditationRank,
-		meditationCount: totalMeditationCount,
-		streak,
-	} = useAppState();
 	const today = getLocalDateString();
-
-	// Share card ref
-	const shareCardRef = useRef<ViewShot>(null);
-	const [isSharing, setIsSharing] = useState(false);
-
-	const handleShare = useCallback(async (): Promise<void> => {
-		if (isSharing) return;
-		setIsSharing(true);
-		await shareStreakCard(shareCardRef);
-		setIsSharing(false);
-	}, [isSharing]);
 
 	const zeroWeekStats: WeeklyStats = {
 		successRate: 0,
@@ -270,50 +254,9 @@ export default function ProgressScreen(): React.ReactElement {
 	// ---------------------------------------------------------------------------
 
 	const loadBestStreak = useCallback(async (): Promise<void> => {
-		// Use check-in dates for streak calculation
-		const sortedDates = await getAllCheckinDates(db);
-
-		let longest = 0;
-		let current = 0;
-		let trailingCurrent = 0;
-
-		for (let i = 0; i < sortedDates.length; i++) {
-			if (i === 0) {
-				current = 1;
-			} else {
-				const prev = new Date(`${sortedDates[i - 1]}T00:00:00`);
-				const curr = new Date(`${sortedDates[i]}T00:00:00`);
-				const diffMs = curr.getTime() - prev.getTime();
-				const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-				if (diffDays === 1) {
-					current += 1;
-				} else {
-					current = 1;
-				}
-			}
-			if (current > longest) {
-				longest = current;
-			}
-			if (i === sortedDates.length - 1) {
-				trailingCurrent = current;
-			}
-		}
-
-		const lastDate = sortedDates[sortedDates.length - 1];
-		if (lastDate !== undefined) {
-			const lastMs = new Date(`${lastDate}T00:00:00`).getTime();
-			const todayMs = new Date(`${today}T00:00:00`).getTime();
-			const diffDays = Math.round((todayMs - lastMs) / (1000 * 60 * 60 * 24));
-			if (diffDays <= 1) {
-				setCurrentStreak(trailingCurrent);
-			} else {
-				setCurrentStreak(0);
-			}
-		} else {
-			setCurrentStreak(0);
-		}
-
-		setBestStreak(longest);
+		const checkinDates = await getAllCheckinDates(db);
+		setCurrentStreak(calculateStreak(checkinDates, today));
+		setBestStreak(calculateLongestStreak(checkinDates));
 	}, [db, today]);
 
 	// ---------------------------------------------------------------------------
@@ -363,31 +306,6 @@ export default function ProgressScreen(): React.ReactElement {
 
 			{/* Personal best highlight */}
 			<PersonalBestCard bestStreak={bestStreak} currentStreak={currentStreak} />
-
-			{/* Share streak button */}
-			<Button
-				mode="outlined"
-				onPress={() => void handleShare()}
-				loading={isSharing}
-				disabled={isSharing}
-				style={styles.shareButton}
-				contentStyle={styles.shareButtonContent}
-				textColor={colors.secondary}
-				accessibilityLabel={t("progress.shareYourStreak")}
-			>
-				{t("progress.shareYourStreak")}
-			</Button>
-
-			{/* Off-screen share card for capture */}
-			<View style={styles.offscreenCapture} pointerEvents="none">
-				<ViewShot ref={shareCardRef} options={{ format: "png", quality: 1 }}>
-					<ShareStreakCard
-						streak={streak}
-						meditationCount={totalMeditationCount}
-						meditationRank={meditationRank}
-					/>
-				</ViewShot>
-			</View>
 
 			{/* Week comparison */}
 			<WeekComparisonCard
@@ -539,19 +457,6 @@ const styles = StyleSheet.create({
 	},
 	bottomSpacer: {
 		height: 24,
-	},
-	shareButton: {
-		borderRadius: 12,
-		borderColor: colors.secondary,
-	},
-	shareButtonContent: {
-		paddingVertical: 6,
-	},
-	offscreenCapture: {
-		position: "absolute",
-		top: -9999,
-		left: 0,
-		opacity: 0,
 	},
 	// WeekComparisonCard styles
 	comparisonTitle: {

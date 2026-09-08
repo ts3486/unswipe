@@ -22,12 +22,6 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Privacy Badge — shield icon + "100% offline" label
 - Sticky bottom "Reset" CTA
 
-### /(tabs)/panic
-- State machine: select_urge → breathing → select_action → spend_delay (if spend) → log_outcome → complete
-- Haptic feedback — light pulses on inhale/exhale start (expo-haptics)
-- Visual breathing guide — expanding/contracting circle animation (4s inhale, 2s hold, 6s exhale), blue gradient #4C8DFF → #7AA7FF
-- Outcome screen — confetti animation on success, Meditation Rank level-up display, "Share your streak" button
-
 ### /(tabs)/progress
 - Monthly calendar with success-day highlighting
 - Weekly comparison card
@@ -35,9 +29,11 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Personal Best highlight — animate calendar on longest streak, show "New personal best: X days" card
 - Weekly Insight Cards — "You resist urges most on [weekday]", "Your strongest time is [morning/afternoon/evening]", "Check urges are down X% this week"
 
-### /(tabs)/learn
-- 7-day starter course display
-- Content completion tracking
+### /(tabs)/history
+- Daily check-in history: scrollable list of past check-ins, newest first
+- Each row shows date, mood/fatigue/urge levels, and night-open/spend flags
+- Tapping a row opens `/progress/day/[date]` for the full detail view
+- Empty state before the user's first check-in
 
 ### /(tabs)/settings
 - Notification style toggle
@@ -58,24 +54,24 @@ This document tracks feature-level requirements, screen specs, and implementatio
 
 ### /progress/day/[date]
 - Timeline of urge events for that day (chronological, with outcome chips, trigger tags, coping actions)
-- Check-in display if completed (mood, fatigue, urge level, night-open flag, spend flag)
-- Summary badges (meditated / did not meditate / ongoing counts)
+- Check-in display if completed — mood/fatigue/urge level shown as the selected qualitative option (e.g. "Great", "Tired", "Calm"), not a numeric score or dots; plus night-open flag, spend flag
 
 ## Domain Rules
 - Meditation Rank: starts 1, +1 per 5 meditations, never decreases, cap 30
 - Day boundary: device local timezone midnight
-- Day success: panic_success_count >= 1 OR daily_task_completed
+- Day success: panic_success_count >= 1 OR daily_task_completed (daily_task_completed = today's daily check-in exists)
 - Once success that day, later fails don't remove it
 - Urge kinds: swipe, check, spend
 - Spend categories: iap, date, gift, tipping, transport, other
 - App access: free for all users. The `(tabs)` navigator no longer gates on `isPremium` — no redirect to paywall.
+- Streak: current streak (`calculateStreak`) counts consecutive check-in dates ending on today (0 if today has no check-in yet); best/personal-best streak (`calculateLongestStreak`) is the longest consecutive run anywhere in check-in history. Both live in `src/domain/progress-rules.ts` and are the single source of truth — the Home badge, the Progress tab's streak ring/personal-best card, and the streak-nudge notification all read from the same two functions.
 
 ## Localization
 - Supported locales: `en` (default), `ja`
 - Library: `react-i18next` + `i18next`; device locale detected via `expo-localization`
 - Resolution order: `user_profile.locale` (persisted, set by explicit Settings toggle) → device locale (`expo-localization`) → `en` fallback
 - UI strings extracted to `src/i18n/locales/en.json` / `src/i18n/locales/ja.json`, accessed via `useTranslation()` / `t()` — no more inline English literals in screens/components
-- Seed content: parallel Japanese seed files `data/seed/catalog.ja.json` and `data/seed/starter_7d.ja.json`, mirroring the English structure exactly (same IDs, same shape); the seed loader picks the file matching the active locale
+- Seed content: parallel Japanese seed file `data/seed/catalog.ja.json`, mirroring the English structure exactly (same IDs, same shape); the seed loader picks the file matching the active locale
 - Date formatting: `date-fns/locale/ja` wired into the two locale-sensitive `format()` calls (`app/progress/day/[date].tsx`) via the active locale
 - Notification copy (`src/constants/notification-content.ts`) localized through the same `t()` keys
 - `__tests__/wording/forbidden-wording.test.ts` extended with Japanese-equivalent patterns for the same 5 banned categories (sexual wording, cure/treatment claims, perfect-blocking claims, relationship/dating coaching, forced/involuntary lockout), run against both seed locale variants
@@ -83,7 +79,6 @@ This document tracks feature-level requirements, screen specs, and implementatio
 
 ## Data
 - Seed: `data/seed/catalog.json` / `data/seed/catalog.ja.json` (triggers, actions, spend delay cards)
-- Seed: `data/seed/starter_7d.json` / `data/seed/starter_7d.ja.json` (7-day course)
 - Storage: expo-sqlite, local only, no backend
 
 ## Services
@@ -92,7 +87,6 @@ This document tracks feature-level requirements, screen specs, and implementatio
   - Smart evening nudge (9-10pm, if no app open that day)
   - Streak preservation nudge (8pm, if 3+ day streak at risk)
   - Weekly summary (Sunday evening)
-  - Course unlock notification (8am daily, days 2–7, if lesson not yet completed)
 - Analytics (no free-text, no spend_amount, no notes)
 - Subscription/paywall (IAP via RevenueCat) — dormant. App is free; RC SDK is not initialized on launch and the tab navigator no longer gates on `isPremium`. Service/repository/DB table/paywall screen are kept in place, unused, for a future freemium feature.
 - Share service — generate shareable streak card image via native share sheet
@@ -104,6 +98,10 @@ This document tracks feature-level requirements, screen specs, and implementatio
 - Gender-neutral, inclusive language (maintained)
 
 ## Changelog
+- 2026-09-01: Deleted the dead panic/reset state machine — `src/hooks/usePanicFlow.ts` (zero importers) and `app/(tabs)/panic.tsx` (a redirect-only stub, itself unreferenced by any deep link, notification, or in-app navigation) — plus its hidden tab registration in `app/(tabs)/_layout.tsx`. Removed the `/(tabs)/panic` entries from CLAUDE.md and SPEC.md. This was already fully unreachable code (the reset flow has lived inline on Home for a while); deleting it changes no runtime behavior. Note: as a side effect, `createUrgeEvent`, `upsertProgress`, `shouldIncrementMeditation`, and `shouldIncrementSpendAvoided` now have zero live callers too (their only caller was the deleted hook) — the `progress` table (and therefore Meditation Rank, never displayed on Home either) has had no write path for some time. Left in place pending a decision on whether to revive or fully remove that subsystem.
+- 2026-09-01: Fixed the streak-preservation notification, which was never firing — it read `appState.streak` (today-inclusive, so it's always 0 before today's check-in, exactly when the nudge needs to fire). Added `subtractOneDay` (exported from `progress-rules.ts`) and a new `streakBeforeToday` value in `AppStateContext`, computed as the streak ending yesterday; `rescheduleAll`'s `AppStateForNotifications.streak` field was renamed to `streakBeforeToday` and now receives this value instead. The Home badge's `streak` (today-inclusive) is unchanged. Confirmed the panic/reset state machine (`usePanicFlow`, `/panic` route) is dead code — the flow now lives entirely on the Home tab's embedded breathing exercise, which never logs `urge_event` rows — so "panic-only successes" can't occur in the current app and don't need to feed streak calculations.
+- 2026-09-01: Unified streak calculation — added `calculateLongestStreak` to `src/domain/progress-rules.ts` and switched the Progress tab's `loadBestStreak` to reuse it plus the existing `calculateStreak`, replacing a duplicated, untested inline algorithm that used slightly different (grace-period) semantics than the Home badge and streak notifications. Also simplified the day-detail check-in display to show the selected option label (e.g. "Great") instead of a numeric score with dots, and removed the meditated/did-not-meditate/ongoing summary badges from that screen as no longer necessary.
+- 2026-09-01: Removed the Learn tab and 7-day starter course entirely — deleted the `content`/`content_progress` tables, `content-repository.ts`, `useContent` hook, `starter_7d.json`/`.ja.json` seed files, the course-unlock notification, and the `content_viewed`/`content_completed` analytics events. Added a `/(tabs)/history` tab showing a scrollable list of past daily check-ins (linking into the existing `/progress/day/[date]` detail screen). Redefined `daily_task_completed` to mean "today's daily check-in exists" instead of "today's course content completed."
 - 2026-08-01: Made the app completely free — removed the `isPremium` gate from `(tabs)/_layout.tsx`, dropped the onboarding→paywall redirect (Ready CTA now goes straight to Home), removed the "Unlock Unmatch"/"Why We Charge" rows from Settings, and stopped RevenueCat SDK init/foreground sync on app launch. Kept `/paywall` screen, `subscription-service.ts`, `subscription-repository.ts`, and the `subscription_state` table in place, unused, for a future freemium feature.
 - 2026-02-28: Removed MotivationCard, TimeSavedCard, and useWeeklySuccessCount from Home screen; removed TIME_SAVED_PER_MEDITATION_MINUTES constant; cleaned up [NEW]/[DONE] status tags — all items now reflect implemented state; updated day detail spec to match implementation (summary badges, full check-in fields, timeline with coping actions); removed daily motivation messages from Data section
 - 2026-02-28: Replaced onboarding breathing demo with value proposition showcase; new flow: Welcome → Personalize → Features (4 value-prop cards) → Ready (personalized CTA); removed breathing timer/state; "Start my pause" CTA

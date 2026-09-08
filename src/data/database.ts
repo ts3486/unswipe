@@ -63,24 +63,6 @@ CREATE TABLE IF NOT EXISTS progress (
 );
 `.trim();
 
-const CREATE_CONTENT = `
-CREATE TABLE IF NOT EXISTS content (
-  content_id TEXT PRIMARY KEY,
-  day_index INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  action_text TEXT NOT NULL,
-  est_minutes INTEGER NOT NULL
-);
-`.trim();
-
-const CREATE_CONTENT_PROGRESS = `
-CREATE TABLE IF NOT EXISTS content_progress (
-  content_id TEXT PRIMARY KEY,
-  completed_at TEXT NOT NULL
-);
-`.trim();
-
 const CREATE_SUBSCRIPTION_STATE = `
 CREATE TABLE IF NOT EXISTS subscription_state (
   id TEXT PRIMARY KEY,
@@ -135,8 +117,6 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     ${CREATE_DAILY_CHECKIN}
     ${CREATE_URGE_EVENT}
     ${CREATE_PROGRESS}
-    ${CREATE_CONTENT}
-    ${CREATE_CONTENT_PROGRESS}
     ${CREATE_SUBSCRIPTION_STATE}
   `);
 

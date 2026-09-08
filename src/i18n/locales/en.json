@@ -137,16 +137,12 @@
 		"noData": "No data recorded for this day.",
 		"urgeKind": { "swipe": "Swiping", "check": "Checking", "spend": "Spending" }
 	},
-	"learn": {
-		"title": "7-Day Starter",
-		"subtitle": "A gentle daily practice to build healthier habits.",
-		"minutes": "{{count}} min",
-		"dayCardA11y": "Day {{day}}: {{title}}",
-		"notYetAvailable": "Not yet available",
-		"tapToExpand": "Tap to expand",
-		"practice": "Practice",
-		"markComplete": "Mark complete",
-		"completed": "Completed"
+	"history": {
+		"title": "Check-in History",
+		"subtitle": "Your daily check-ins, all in one place.",
+		"empty": "No check-ins yet. Complete today's check-in from Home to start your history.",
+		"summaryLine": "Mood: {{mood}} · Fatigue: {{fatigue}} · Urge: {{urge}}",
+		"rowA11y": "Check-in for {{date}}"
 	},
 	"blockerGuide": {
 		"title": "How to limit dating app access",
@@ -201,7 +197,6 @@
 		"importUrgeEvents": "{{count}} urge events",
 		"importCheckins": "{{count}} check-ins",
 		"importProgress": "{{count}} progress records",
-		"importContentProgress": "{{count}} course completions",
 		"importProfile": "{{count}} profile",
 		"importSubscription": "{{count}} subscription record"
 	},
@@ -256,14 +251,12 @@
 			}
 		],
 		"streakNudgeBody": "Don't break your streak! Complete today's check-in before midnight.",
-		"courseUnlockBody": "A new lesson is available. Check it out to keep your progress going!",
 		"eveningNudgeTitle": "Feeling the urge?",
 		"eveningNudgeBody": "Open Unmatch for a 60-second reset.",
 		"streakStillGoingTitle": "Your {{days}}-day streak is still going.",
 		"keepItAlive": "Keep it alive?",
 		"weeklySummaryTitle": "Your week in review",
-		"weeklySummaryBody": "This week: {{count}} meditations completed, {{minutes}} minutes saved. View your progress.",
-		"courseUnlockStarterBody": "A new lesson is available in your starter course."
+		"weeklySummaryBody": "This week: {{count}} meditations completed, {{minutes}} minutes saved. View your progress."
 	},
 	"breathing": {
 		"affirmations": [

@@ -6,9 +6,9 @@ import {
 	countSuccessesByDate,
 	createUserProfile,
 	getAllCheckinDates,
+	getCheckinByDate,
 	getLatestProgress,
 	getUserProfile,
-	hasContentCompletedOnDate,
 	updateUserProfile,
 } from "@/src/data/repositories";
 import {
@@ -17,11 +17,11 @@ import {
 	recordLifetimePurchase,
 	recordMonthlySubscription,
 } from "@/src/data/repositories/subscription-repository";
-import { reseedContentForLocale } from "@/src/data/seed-loader";
 import {
 	calculateMeditationRank,
 	calculateStreak,
 	isDaySuccess,
+	subtractOneDay,
 } from "@/src/domain/progress-rules";
 import type { Progress, UserProfile } from "@/src/domain/types";
 import i18n, { type SupportedLocale, isSupportedLocale } from "@/src/i18n";
@@ -45,6 +45,7 @@ interface AppState {
 	userProfile: UserProfile | null;
 	todayProgress: Progress | null;
 	streak: number;
+	streakBeforeToday: number;
 	meditationRank: number;
 	meditationCount: number;
 	todaySuccess: boolean;
@@ -92,6 +93,7 @@ export function AppStateProvider({
 	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 	const [todayProgress, setTodayProgress] = useState<Progress | null>(null);
 	const [streak, setStreak] = useState<number>(0);
+	const [streakBeforeToday, setStreakBeforeToday] = useState<number>(0);
 	const [meditationRank, setMeditationRank] = useState<number>(1);
 	const [meditationCount, setMeditationCount] = useState<number>(0);
 	const [todaySuccess, setTodaySuccess] = useState<boolean>(false);
@@ -135,10 +137,18 @@ export function AppStateProvider({
 		const checkinDates = await getAllCheckinDates(db);
 		setStreak(calculateStreak(checkinDates, today));
 
+		// Streak as of yesterday — the run that is still "at risk" until
+		// today's check-in happens. Used by the streak-preservation
+		// notification, which by definition only fires before today is done
+		// (calculateStreak(checkinDates, today) would otherwise read 0 at
+		// that point, since today can't be in checkinDates yet).
+		setStreakBeforeToday(calculateStreak(checkinDates, subtractOneDay(today)));
+
 		// Today success: at least one panic success OR daily task completed.
+		// The daily task is today's check-in.
 		const panicSuccessCount = await countSuccessesByDate(db, today);
-		const dailyTaskCompleted = await hasContentCompletedOnDate(db, today);
-		setTodaySuccess(isDaySuccess(panicSuccessCount, dailyTaskCompleted));
+		const todaysCheckin = await getCheckinByDate(db, today);
+		setTodaySuccess(isDaySuccess(panicSuccessCount, todaysCheckin !== null));
 	}, [db]);
 
 	// ---------------------------------------------------------------------------
@@ -173,7 +183,6 @@ export function AppStateProvider({
 			if (userProfile === null) return;
 			await updateUserProfile(db, userProfile.id, { locale });
 			await i18n.changeLanguage(locale);
-			await reseedContentForLocale(db, locale);
 			await refreshProfile();
 		},
 		[db, userProfile, refreshProfile],
@@ -226,6 +235,7 @@ export function AppStateProvider({
 		userProfile,
 		todayProgress,
 		streak,
+		streakBeforeToday,
 		meditationRank,
 		meditationCount,
 		todaySuccess,

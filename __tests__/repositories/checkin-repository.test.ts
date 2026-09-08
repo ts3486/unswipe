@@ -3,6 +3,7 @@
 
 import {
 	createCheckin,
+	getAllCheckins,
 	getCheckinByDate,
 	getCheckinsInRange,
 } from "@/src/data/repositories/checkin-repository";
@@ -266,5 +267,59 @@ describe("getCheckinsInRange", () => {
 		expect(result[0].id).toBe("ci-a");
 		expect(result[1].id).toBe("ci-b");
 		expect(result[1].note).toBe("Better day");
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getAllCheckins
+// ---------------------------------------------------------------------------
+
+describe("getAllCheckins", () => {
+	it("returns empty array when db returns no rows", async () => {
+		const db = makeMockDb();
+		const result = await getAllCheckins(db);
+		expect(result).toEqual([]);
+	});
+
+	it("calls db.getAllAsync against daily_checkin ordered by date_local DESC", async () => {
+		const db = makeMockDb();
+		await getAllCheckins(db);
+		const [sql] = (db.getAllAsync as jest.Mock).mock.calls[0] as [string];
+		expect(sql).toMatch(/daily_checkin/i);
+		expect(sql).toMatch(/ORDER BY date_local DESC/i);
+	});
+
+	it("maps multiple rows to DailyCheckin array, newest first", async () => {
+		const mockRows = [
+			{
+				id: "ci-b",
+				date_local: "2026-02-16",
+				mood: 4,
+				fatigue: 2,
+				urge: 2,
+				note: "Better day",
+				opened_at_night: 0,
+				spent_today: 1,
+				spent_amount: null,
+			},
+			{
+				id: "ci-a",
+				date_local: "2026-02-15",
+				mood: 2,
+				fatigue: 4,
+				urge: 3,
+				note: null,
+				opened_at_night: null,
+				spent_today: null,
+				spent_amount: null,
+			},
+		];
+		const db = makeMockDb({
+			getAllAsync: jest.fn().mockResolvedValue(mockRows),
+		});
+		const result = await getAllCheckins(db);
+		expect(result).toHaveLength(2);
+		expect(result[0].id).toBe("ci-b");
+		expect(result[1].id).toBe("ci-a");
 	});
 });

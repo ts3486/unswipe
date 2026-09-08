@@ -27,7 +27,6 @@ import {
 async function deleteAllData(
 	db: import("expo-sqlite").SQLiteDatabase,
 ): Promise<void> {
-	await db.runAsync("DELETE FROM content_progress;");
 	await db.runAsync("DELETE FROM urge_event;");
 	await db.runAsync("DELETE FROM daily_checkin;");
 	await db.runAsync("DELETE FROM progress;");
@@ -105,12 +104,6 @@ export default function PrivacyScreen(): React.ReactElement {
 			);
 		if (importCounts.progress > 0)
 			parts.push(t("privacy.importProgress", { count: importCounts.progress }));
-		if (importCounts.content_progress > 0)
-			parts.push(
-				t("privacy.importContentProgress", {
-					count: importCounts.content_progress,
-				}),
-			);
 		if (importCounts.user_profile > 0)
 			parts.push(
 				t("privacy.importProfile", { count: importCounts.user_profile }),

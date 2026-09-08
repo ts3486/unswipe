@@ -5,12 +5,10 @@
 import type { NotificationStyle } from "@/src/domain/types";
 import type { NotificationContent } from "@/src/services/notifications";
 import {
-	buildCourseUnlockContent,
 	buildEveningNudgeContent,
 	buildStreakNudgeContent,
 	buildWeeklySummaryContent,
 	getEveningTriggerHour,
-	shouldSendCourseUnlock,
 	shouldSendEveningNudge,
 	shouldSendStreakNudge,
 } from "@/src/services/notifications";
@@ -111,30 +109,6 @@ describe("buildWeeklySummaryContent", () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildCourseUnlockContent
-// ---------------------------------------------------------------------------
-
-describe("buildCourseUnlockContent", () => {
-	it('returns message when style is "normal"', () => {
-		const content = requireContent(buildCourseUnlockContent("normal"));
-		expect(content.title).toBeDefined();
-		expect(content.body).toBeDefined();
-	});
-
-	it('returns null when style is "off"', () => {
-		expect(buildCourseUnlockContent("off")).toBeNull();
-	});
-
-	it('normal content mentions "lesson" or "course"', () => {
-		const content = requireContent(buildCourseUnlockContent("normal"));
-		const combined = `${content.title} ${content.body}`.toLowerCase();
-		expect(
-			combined.includes("lesson") || combined.includes("course"),
-		).toBe(true);
-	});
-});
-
-// ---------------------------------------------------------------------------
 // shouldSendEveningNudge
 // ---------------------------------------------------------------------------
 
@@ -174,33 +148,6 @@ describe("shouldSendStreakNudge", () => {
 
 	it("returns false when streak >= 3 but todaySuccess is true", () => {
 		expect(shouldSendStreakNudge(3, true)).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// shouldSendCourseUnlock
-// ---------------------------------------------------------------------------
-
-describe("shouldSendCourseUnlock", () => {
-	it("returns false for currentDayIndex <= 1", () => {
-		expect(shouldSendCourseUnlock(0, false)).toBe(false);
-		expect(shouldSendCourseUnlock(1, false)).toBe(false);
-	});
-
-	it("returns true for days 2–7 when not completed", () => {
-		expect(shouldSendCourseUnlock(2, false)).toBe(true);
-		expect(shouldSendCourseUnlock(4, false)).toBe(true);
-		expect(shouldSendCourseUnlock(7, false)).toBe(true);
-	});
-
-	it("returns false when todayContentCompleted is true", () => {
-		expect(shouldSendCourseUnlock(3, true)).toBe(false);
-		expect(shouldSendCourseUnlock(7, true)).toBe(false);
-	});
-
-	it("returns false for currentDayIndex > 7", () => {
-		expect(shouldSendCourseUnlock(8, false)).toBe(false);
-		expect(shouldSendCourseUnlock(100, false)).toBe(false);
 	});
 });
 

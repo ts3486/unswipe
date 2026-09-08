@@ -102,22 +102,6 @@ describe('NoopAnalyticsAdapter', () => {
     expect(() => adapter.track(event)).not.toThrow();
   });
 
-  it('track() does not throw for content_viewed', () => {
-    const event: AnalyticsEvent = {
-      name: 'content_viewed',
-      props: { content_id: 'starter_7d_day_1', day_index: 1 },
-    };
-    expect(() => adapter.track(event)).not.toThrow();
-  });
-
-  it('track() does not throw for content_completed', () => {
-    const event: AnalyticsEvent = {
-      name: 'content_completed',
-      props: { content_id: 'starter_7d_day_1', day_index: 1 },
-    };
-    expect(() => adapter.track(event)).not.toThrow();
-  });
-
   it('track() does not throw for paywall_viewed', () => {
     const event: AnalyticsEvent = {
       name: 'paywall_viewed',

@@ -58,7 +58,6 @@ function makeValidEnvelope(
 				{ date_local: "2026-02-27" },
 				{ date_local: "2026-02-28" },
 			],
-			content_progress: [],
 			subscription_state: [{ id: "singleton", status: "active" }],
 		},
 		...overrides,
@@ -79,7 +78,6 @@ describe("validateImportData — valid data", () => {
 			urge_events: 3,
 			daily_checkins: 2,
 			progress: 5,
-			content_progress: 0,
 			subscription_state: 1,
 		});
 	});
@@ -91,7 +89,6 @@ describe("validateImportData — valid data", () => {
 				urge_events: [],
 				daily_checkins: [],
 				progress: [],
-				content_progress: [],
 				subscription_state: [],
 			},
 		});
@@ -102,7 +99,6 @@ describe("validateImportData — valid data", () => {
 			urge_events: 0,
 			daily_checkins: 0,
 			progress: 0,
-			content_progress: 0,
 			subscription_state: 0,
 		});
 	});
@@ -220,12 +216,6 @@ describe("validateImportData — missing required table keys", () => {
 		expect(() => validateImportData(input)).toThrow();
 	});
 
-	it("throws when content_progress key is absent", () => {
-		const { content_progress: _cp, ...rest } = makeValidEnvelope().tables;
-		const input: unknown = { ...makeValidEnvelope(), tables: rest };
-		expect(() => validateImportData(input)).toThrow();
-	});
-
 	it("throws when subscription_state key is absent", () => {
 		const { subscription_state: _ss, ...rest } = makeValidEnvelope().tables;
 		const input: unknown = { ...makeValidEnvelope(), tables: rest };
@@ -257,7 +247,7 @@ describe("importData — DELETE inside transaction", () => {
 		expect(db.withExclusiveTransactionAsync).toHaveBeenCalledTimes(1);
 	});
 
-	it("issues a DELETE for every table (6 total)", async () => {
+	it("issues a DELETE for every table (5 total)", async () => {
 		const db = createMockDb();
 		const envelope = makeValidEnvelope();
 		await importData(db as never, envelope);
@@ -265,7 +255,7 @@ describe("importData — DELETE inside transaction", () => {
 		const deleteCalls = db._runCalls.filter((c) =>
 			c.sql.trim().toUpperCase().startsWith("DELETE"),
 		);
-		expect(deleteCalls).toHaveLength(6);
+		expect(deleteCalls).toHaveLength(5);
 	});
 
 	it("deletes the user_profile table", async () => {
@@ -311,18 +301,6 @@ describe("importData — DELETE inside transaction", () => {
 		const found = db._runCalls.some(
 			(c) =>
 				c.sql.includes("progress") &&
-				c.sql.trim().toUpperCase().startsWith("DELETE"),
-		);
-		expect(found).toBe(true);
-	});
-
-	it("deletes the content_progress table", async () => {
-		const db = createMockDb();
-		await importData(db as never, makeValidEnvelope());
-
-		const found = db._runCalls.some(
-			(c) =>
-				c.sql.includes("content_progress") &&
 				c.sql.trim().toUpperCase().startsWith("DELETE"),
 		);
 		expect(found).toBe(true);
@@ -377,8 +355,7 @@ describe("importData — INSERT rows", () => {
 		const inserts = db._runCalls.filter(
 			(c) =>
 				c.sql.includes("daily_checkin") &&
-				c.sql.trim().toUpperCase().startsWith("INSERT") &&
-				!c.sql.includes("content"),
+				c.sql.trim().toUpperCase().startsWith("INSERT"),
 		);
 		expect(inserts).toHaveLength(2);
 	});
@@ -389,24 +366,10 @@ describe("importData — INSERT rows", () => {
 
 		const inserts = db._runCalls.filter(
 			(c) =>
-				// match 'progress' but not 'content_progress'
 				/\bprogress\b/.test(c.sql) &&
-				!c.sql.includes("content_progress") &&
 				c.sql.trim().toUpperCase().startsWith("INSERT"),
 		);
 		expect(inserts).toHaveLength(5);
-	});
-
-	it("inserts 0 content_progress rows when table is empty", async () => {
-		const db = createMockDb();
-		await importData(db as never, makeValidEnvelope());
-
-		const inserts = db._runCalls.filter(
-			(c) =>
-				c.sql.includes("content_progress") &&
-				c.sql.trim().toUpperCase().startsWith("INSERT"),
-		);
-		expect(inserts).toHaveLength(0);
 	});
 
 	it("inserts 1 subscription_state row", async () => {
@@ -434,33 +397,6 @@ describe("importData — INSERT rows", () => {
 		expect(insert).toBeDefined();
 		expect(insert!.params).toContain("singleton");
 		expect(insert!.params).toContain("en");
-	});
-
-	it("inserts content_progress rows when the table has data", async () => {
-		const db = createMockDb();
-		const envelope = makeValidEnvelope({
-			tables: {
-				...makeValidEnvelope().tables,
-				content_progress: [
-					{
-						content_id: "starter_7d_day_1",
-						completed_at: "2026-02-27T10:00:00Z",
-					},
-					{
-						content_id: "starter_7d_day_2",
-						completed_at: "2026-02-28T10:00:00Z",
-					},
-				],
-			},
-		});
-		await importData(db as never, envelope);
-
-		const inserts = db._runCalls.filter(
-			(c) =>
-				c.sql.includes("content_progress") &&
-				c.sql.trim().toUpperCase().startsWith("INSERT"),
-		);
-		expect(inserts).toHaveLength(2);
 	});
 });
 

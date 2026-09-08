@@ -24,6 +24,7 @@ export {
 	createCheckin,
 	getCheckinByDate,
 	getCheckinsInRange,
+	getAllCheckins,
 	getAllCheckinDates,
 } from "./checkin-repository";
 
@@ -33,15 +34,6 @@ export {
 	upsertProgress,
 	getAllProgressDates,
 } from "./progress-repository";
-
-export {
-	getAllContent,
-	getContentByDay,
-	markContentCompleted,
-	getContentProgress,
-	isContentCompleted,
-	hasContentCompletedOnDate,
-} from "./content-repository";
 
 export {
 	getSubscription,

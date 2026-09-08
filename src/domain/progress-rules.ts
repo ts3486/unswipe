@@ -84,7 +84,7 @@ export function calculateStreak(dates: string[], today: string): number {
  * Subtract exactly one calendar day from a YYYY-MM-DD string.
  * Uses UTC arithmetic on the date components to avoid DST drift.
  */
-function subtractOneDay(dateLocal: string): string {
+export function subtractOneDay(dateLocal: string): string {
 	const [yearStr, monthStr, dayStr] = dateLocal.split("-");
 	const year = Number.parseInt(yearStr, 10);
 	const month = Number.parseInt(monthStr, 10) - 1; // Date months are 0-indexed
@@ -96,6 +96,32 @@ function subtractOneDay(dateLocal: string): string {
 	const m = String(d.getUTCMonth() + 1).padStart(2, "0");
 	const dd = String(d.getUTCDate()).padStart(2, "0");
 	return `${y}-${m}-${dd}`;
+}
+
+/**
+ * Calculate the longest run of consecutive success days anywhere in the
+ * given list (the all-time "personal best" streak), not just the run
+ * ending on a particular anchor date.
+ *
+ * @param dates - Array of YYYY-MM-DD strings that were success days.
+ *                Need not be sorted; duplicates are ignored.
+ * @returns Length of the longest consecutive run (0 for an empty list).
+ */
+export function calculateLongestStreak(dates: string[]): number {
+	const sorted = [...new Set(dates)].sort();
+
+	let longest = 0;
+	let current = 0;
+	let previous: string | null = null;
+
+	for (const date of sorted) {
+		current =
+			previous !== null && subtractOneDay(date) === previous ? current + 1 : 1;
+		longest = Math.max(longest, current);
+		previous = date;
+	}
+
+	return longest;
 }
 
 // ---------------------------------------------------------------------------
