@@ -104,6 +104,16 @@ export function useCheckin(): UseCheckinReturn {
 			);
 			setSpentAmount(existing.spent_amount);
 			setIsComplete(true);
+		} else {
+			setExistingCheckin(null);
+			setIsComplete(false);
+			setMood(DEFAULT_MOOD);
+			setFatigue(DEFAULT_FATIGUE);
+			setUrge(DEFAULT_URGE);
+			setNote("");
+			setOpenedAtNight(null);
+			setSpentToday(null);
+			setSpentAmount(null);
 		}
 	}, [db]);
 

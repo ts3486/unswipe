@@ -9,13 +9,15 @@ import {
 	useUrgeLabels,
 } from "@/src/components/RatingChips";
 import { colors } from "@/src/constants/theme";
-import { useCheckinHistory } from "@/src/hooks/useCheckinHistory";
 import type { DailyCheckin } from "@/src/domain/types";
+import { useCheckinHistory } from "@/src/hooks/useCheckinHistory";
+import { type SupportedLocale, isSupportedLocale } from "@/src/i18n";
+import { formatSpentAmount } from "@/src/utils/currency";
 import { parseLocalDate } from "@/src/utils/date";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -35,13 +37,20 @@ import { Card, Text } from "react-native-paper";
 export default function HistoryScreen(): React.ReactElement {
 	const { t, i18n } = useTranslation();
 	const router = useRouter();
-	const { checkins, isLoading } = useCheckinHistory();
+	const { checkins, isLoading, refresh } = useCheckinHistory();
+
+	useFocusEffect(
+		useCallback(() => {
+			void refresh();
+		}, [refresh]),
+	);
 
 	const moodLabels = useMoodLabels();
 	const fatigueLabels = useFatigueLabels();
 	const urgeLabels = useUrgeLabels();
 
 	const dateFnsLocale = i18n.language === "ja" ? ja : undefined;
+	const currentLocale = isSupportedLocale(i18n.language) ? i18n.language : "en";
 
 	const formatDateLabel = useCallback(
 		(dateLocal: string): string => {
@@ -111,6 +120,7 @@ export default function HistoryScreen(): React.ReactElement {
 								fatigueLabels[checkin.fatigue] ?? String(checkin.fatigue)
 							}
 							urgeLabel={urgeLabels[checkin.urge] ?? String(checkin.urge)}
+							locale={currentLocale}
 							onPress={() => {
 								handlePress(checkin.date_local);
 							}}
@@ -134,6 +144,7 @@ interface CheckinRowProps {
 	moodLabel: string;
 	fatigueLabel: string;
 	urgeLabel: string;
+	locale: SupportedLocale;
 	onPress: () => void;
 }
 
@@ -143,9 +154,11 @@ function CheckinRow({
 	moodLabel,
 	fatigueLabel,
 	urgeLabel,
+	locale,
 	onPress,
 }: CheckinRowProps): React.ReactElement {
 	const { t } = useTranslation();
+	const spentLabel = formatSpentAmount(checkin.spent_amount, locale);
 	return (
 		<Card style={styles.card} mode="contained">
 			<TouchableOpacity
@@ -170,7 +183,9 @@ function CheckinRow({
 							urge: urgeLabel,
 						})}
 					</Text>
-					{(checkin.opened_at_night === 1 || checkin.spent_today === 1) && (
+					{(checkin.opened_at_night === 1 ||
+						checkin.spent_today === 1 ||
+						(checkin.note !== null && checkin.note.length > 0)) && (
 						<View style={styles.flagRow}>
 							{checkin.opened_at_night === 1 && (
 								<View style={styles.flag}>
@@ -187,12 +202,24 @@ function CheckinRow({
 							{checkin.spent_today === 1 && (
 								<View style={styles.flag}>
 									<MaterialCommunityIcons
-										name="currency-usd"
+										name="cash"
 										size={14}
 										color={colors.warning}
 									/>
 									<Text variant="labelSmall" style={styles.flagText}>
-										{t("dayDetail.spentToday")}
+										{spentLabel ?? t("dayDetail.spentToday")}
+									</Text>
+								</View>
+							)}
+							{checkin.note !== null && checkin.note.length > 0 && (
+								<View style={styles.flag}>
+									<MaterialCommunityIcons
+										name="note-text-outline"
+										size={14}
+										color={colors.muted}
+									/>
+									<Text variant="labelSmall" style={styles.flagText}>
+										{t("dayDetail.hasNote")}
 									</Text>
 								</View>
 							)}

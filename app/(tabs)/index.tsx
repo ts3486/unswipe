@@ -10,7 +10,7 @@ import { useAppState } from "@/src/contexts/AppStateContext";
 import { useCheckin } from "@/src/hooks/useCheckin";
 import { useDismissedTips } from "@/src/hooks/useDismissedTips";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -127,6 +127,12 @@ export default function HomeScreen(): React.ReactElement {
 
 	const checkin = useCheckin();
 	const tips = useDismissedTips();
+
+	useFocusEffect(
+		useCallback(() => {
+			void checkin.loadExisting();
+		}, [checkin.loadExisting]),
+	);
 
 	const GUIDE_STEPS = useMemo(
 		() =>

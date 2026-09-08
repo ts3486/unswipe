@@ -10,8 +10,12 @@ import {
 	useUrgeLabels,
 } from "@/src/components/RatingChips";
 import { colors } from "@/src/constants/theme";
+import { useAppState } from "@/src/contexts/AppStateContext";
 import { useCheckin } from "@/src/hooks/useCheckin";
-import { router } from "expo-router";
+import { isSupportedLocale } from "@/src/i18n";
+import { getCurrencySymbol } from "@/src/utils/currency";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router, useFocusEffect } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -101,7 +105,9 @@ function YesNoToggle({
 // ---------------------------------------------------------------------------
 
 export default function CheckinScreen(): React.ReactElement {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const currentLocale = isSupportedLocale(i18n.language) ? i18n.language : "en";
+	const currencySymbol = getCurrencySymbol(currentLocale);
 	const moodLabels = useMoodLabels();
 	const fatigueLabels = useFatigueLabels();
 	const urgeLabels = useUrgeLabels();
@@ -124,11 +130,22 @@ export default function CheckinScreen(): React.ReactElement {
 		setSpentToday,
 		setSpentAmount,
 		submit,
+		loadExisting,
 	} = useCheckin();
+	const { refreshProgress, streak } = useAppState();
+
+	useFocusEffect(
+		useCallback(() => {
+			void loadExisting();
+		}, [loadExisting]),
+	);
 
 	const handleSubmit = useCallback((): void => {
-		void submit();
-	}, [submit]);
+		void (async () => {
+			await submit();
+			await refreshProgress();
+		})();
+	}, [submit, refreshProgress]);
 
 	const handleClose = useCallback((): void => {
 		if (router.canGoBack()) {
@@ -156,84 +173,38 @@ export default function CheckinScreen(): React.ReactElement {
 			: "";
 
 	// ---------------------------------------------------------------------------
-	// Read-only summary (already submitted today)
+	// Completed state (already submitted today)
 	// ---------------------------------------------------------------------------
 
 	if (isComplete && existingCheckin !== null) {
 		return (
-			<ScrollView
-				style={styles.root}
-				contentContainerStyle={styles.content}
-				showsVerticalScrollIndicator={false}
-			>
-				<View style={styles.header}>
-					<Text variant="headlineMedium" style={styles.screenTitle}>
-						{t("checkin.alreadySubmittedTitle")}
+			<View style={styles.completedRoot}>
+				<View style={styles.completedContent}>
+					<MaterialCommunityIcons
+						name="check-circle"
+						size={72}
+						color={colors.success}
+					/>
+					<Text variant="headlineMedium" style={styles.completedTitle}>
+						{t("checkin.completeTitle")}
 					</Text>
-					<Text variant="bodyMedium" style={styles.subtitle}>
-						{t("checkin.alreadySubmittedSubtitle")}
+					<Text variant="bodyMedium" style={styles.completedSubtitle}>
+						{t("checkin.completeSubtitle")}
 					</Text>
+
+					{streak > 0 && (
+						<View style={styles.streakPill}>
+							<MaterialCommunityIcons
+								name="fire"
+								size={18}
+								color={colors.warning}
+							/>
+							<Text variant="labelLarge" style={styles.streakPillText}>
+								{t("personalBest.streakLabel", { count: streak })}
+							</Text>
+						</View>
+					)}
 				</View>
-
-				<Card style={styles.card} mode="contained">
-					<Card.Content style={styles.summaryContent}>
-						<RatingChips
-							label={t("checkin.mood")}
-							value={existingCheckin.mood}
-							onChange={() => {}}
-							readonly
-							labelMap={moodLabels}
-						/>
-						<Divider style={styles.divider} />
-						<RatingChips
-							label={t("checkin.fatigue")}
-							value={existingCheckin.fatigue}
-							onChange={() => {}}
-							readonly
-							labelMap={fatigueLabels}
-						/>
-						<Divider style={styles.divider} />
-						<RatingChips
-							label={t("checkin.urgeLevel")}
-							value={existingCheckin.urge}
-							onChange={() => {}}
-							readonly
-							labelMap={urgeLabels}
-						/>
-
-						{existingCheckin.opened_at_night !== null && (
-							<>
-								<Divider style={styles.divider} />
-								<View style={styles.readonlyRow}>
-									<Text variant="bodyMedium" style={styles.ratingLabel}>
-										{t("checkin.openedLateNightShort")}
-									</Text>
-									<Text variant="bodyMedium" style={styles.readonlyValue}>
-										{existingCheckin.opened_at_night === 1
-											? t("common.yes")
-											: t("common.no")}
-									</Text>
-								</View>
-							</>
-						)}
-
-						{existingCheckin.spent_today !== null && (
-							<>
-								<Divider style={styles.divider} />
-								<View style={styles.readonlyRow}>
-									<Text variant="bodyMedium" style={styles.ratingLabel}>
-										{t("checkin.spentTodayShort")}
-									</Text>
-									<Text variant="bodyMedium" style={styles.readonlyValue}>
-										{existingCheckin.spent_today === 1
-											? t("common.yes")
-											: t("common.no")}
-									</Text>
-								</View>
-							</>
-						)}
-					</Card.Content>
-				</Card>
 
 				<Button
 					mode="outlined"
@@ -243,9 +214,7 @@ export default function CheckinScreen(): React.ReactElement {
 				>
 					{t("common.close")}
 				</Button>
-
-				<View style={styles.bottomSpacer} />
-			</ScrollView>
+			</View>
 		);
 	}
 
@@ -322,7 +291,7 @@ export default function CheckinScreen(): React.ReactElement {
 									value={spentAmountDollars}
 									onChangeText={handleSpentAmountChange}
 									keyboardType="decimal-pad"
-									left={<TextInput.Affix text="$" />}
+									left={<TextInput.Affix text={currencySymbol} />}
 									style={styles.amountInput}
 									outlineColor={colors.border}
 									activeOutlineColor={colors.primary}
@@ -424,9 +393,43 @@ const styles = StyleSheet.create({
 		paddingVertical: 4,
 		gap: 2,
 	},
-	summaryContent: {
-		paddingVertical: 4,
-		gap: 2,
+	completedRoot: {
+		flex: 1,
+		backgroundColor: colors.background,
+		paddingHorizontal: 24,
+		paddingBottom: 24,
+		justifyContent: "space-between",
+	},
+	completedContent: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 10,
+	},
+	completedTitle: {
+		color: colors.text,
+		fontWeight: "700",
+		marginTop: 8,
+	},
+	completedSubtitle: {
+		color: colors.muted,
+		textAlign: "center",
+		lineHeight: 22,
+	},
+	streakPill: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+		borderRadius: 999,
+		paddingHorizontal: 14,
+		paddingVertical: 8,
+		marginTop: 12,
+	},
+	streakPillText: {
+		color: colors.text,
 	},
 	yesNoRow: {
 		paddingVertical: 12,
@@ -464,16 +467,6 @@ const styles = StyleSheet.create({
 	},
 	divider: {
 		backgroundColor: colors.border,
-	},
-	readonlyRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		paddingVertical: 12,
-	},
-	readonlyValue: {
-		color: colors.text,
-		fontWeight: "500",
 	},
 	amountContainer: {
 		paddingTop: 8,

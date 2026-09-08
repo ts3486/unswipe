@@ -13,6 +13,7 @@ import {
 	cancelAllScheduled,
 	requestPermissions,
 } from "@/src/services/notifications";
+import { getLocalDateString } from "@/src/utils/date";
 import { router } from "expo-router";
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -26,8 +27,13 @@ import { Divider, List, Text } from "react-native-paper";
 
 export default function SettingsScreen(): React.ReactElement {
 	const { t, i18n } = useTranslation();
-	const { userProfile, refreshProfile, refreshPremiumStatus, changeLocale } =
-		useAppState();
+	const {
+		userProfile,
+		refreshProfile,
+		refreshProgress,
+		refreshPremiumStatus,
+		changeLocale,
+	} = useAppState();
 	const { db } = useDatabaseContext();
 
 	const [notifStyle, setNotifStyle] = useState<NotificationStyle>(
@@ -197,6 +203,37 @@ export default function SettingsScreen(): React.ReactElement {
 						{t("settings.devTools")}
 					</Text>
 					<View style={styles.listCard}>
+						<List.Item
+							title={t("settings.resetCheckin")}
+							description={t("settings.resetCheckinDesc")}
+							titleStyle={[styles.listTitle, { color: colors.warning }]}
+							descriptionStyle={styles.listDesc}
+							onPress={() => {
+								Alert.alert(
+									t("settings.resetCheckinDialogTitle"),
+									t("settings.resetCheckinDialogBody"),
+									[
+										{ text: t("common.cancel"), style: "cancel" },
+										{
+											text: t("settings.reset"),
+											style: "destructive",
+											onPress: () => {
+												void (async () => {
+													await db.runAsync(
+														"DELETE FROM daily_checkin WHERE date_local = ?;",
+														[getLocalDateString()],
+													);
+													await refreshProgress();
+												})();
+											},
+										},
+									],
+								);
+							}}
+							accessibilityLabel="Reset today's check-in for testing"
+							left={() => <List.Icon icon="undo" color={colors.warning} />}
+						/>
+						<Divider style={{ backgroundColor: colors.border }} />
 						<List.Item
 							title={t("settings.resetOnboarding")}
 							description={t("settings.resetOnboardingDesc")}

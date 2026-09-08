@@ -12,6 +12,8 @@ import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
 import { getCheckinByDate, getUrgeEventsByDate } from "@/src/data/repositories";
 import { getCatalog } from "@/src/data/seed-loader";
 import type { DailyCheckin, UrgeEvent } from "@/src/domain/types";
+import { isSupportedLocale } from "@/src/i18n";
+import { formatSpentAmount } from "@/src/utils/currency";
 import { parseLocalDate } from "@/src/utils/date";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -67,6 +69,7 @@ export default function DayDetailScreen(): React.ReactElement {
 	// ---------------------------------------------------------------------------
 
 	const dateFnsLocale = i18n.language === "ja" ? ja : undefined;
+	const currentLocale = isSupportedLocale(i18n.language) ? i18n.language : "en";
 
 	function formatTime(isoUtc: string): string {
 		try {
@@ -189,6 +192,36 @@ export default function DayDetailScreen(): React.ReactElement {
 													{checkin.spent_today === 1
 														? t("common.yes")
 														: t("common.no")}
+												</Text>
+											</View>
+										</>
+									)}
+									{formatSpentAmount(checkin.spent_amount, currentLocale) !==
+										null && (
+										<>
+											<Divider style={styles.divider} />
+											<View style={styles.checkinRow}>
+												<Text variant="bodyMedium" style={styles.muted}>
+													{t("dayDetail.amountSpent")}
+												</Text>
+												<Text variant="bodyMedium" style={styles.valueText}>
+													{formatSpentAmount(
+														checkin.spent_amount,
+														currentLocale,
+													)}
+												</Text>
+											</View>
+										</>
+									)}
+									{checkin.note !== null && checkin.note.length > 0 && (
+										<>
+											<Divider style={styles.divider} />
+											<View style={styles.noteBlock}>
+												<Text variant="bodyMedium" style={styles.muted}>
+													{t("checkin.personalNote")}
+												</Text>
+												<Text variant="bodyMedium" style={styles.valueText}>
+													{checkin.note}
 												</Text>
 											</View>
 										</>
@@ -351,6 +384,10 @@ const styles = StyleSheet.create({
 	valueText: {
 		color: colors.text,
 		fontWeight: "500",
+	},
+	noteBlock: {
+		paddingVertical: 10,
+		gap: 6,
 	},
 	timeline: {
 		gap: 0,

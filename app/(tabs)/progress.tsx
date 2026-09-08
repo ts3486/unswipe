@@ -21,8 +21,9 @@ import {
 } from "@/src/domain/progress-rules";
 import { getDaysBetween, getLocalDateString } from "@/src/utils/date";
 import { format } from "date-fns";
+import { useFocusEffect } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Divider, Text } from "react-native-paper";
@@ -272,17 +273,13 @@ export default function ProgressScreen(): React.ReactElement {
 		setTimeCounts(tod);
 	}, [db]);
 
-	useEffect(() => {
-		void loadWeeklyStats();
-	}, [loadWeeklyStats]);
-
-	useEffect(() => {
-		void loadBestStreak();
-	}, [loadBestStreak]);
-
-	useEffect(() => {
-		void loadInsightData();
-	}, [loadInsightData]);
+	useFocusEffect(
+		useCallback(() => {
+			void loadWeeklyStats();
+			void loadBestStreak();
+			void loadInsightData();
+		}, [loadWeeklyStats, loadBestStreak, loadInsightData]),
+	);
 
 	const pctSuccess = Math.round(weeklyStats.successRate * 100);
 	const pctPanic = Math.round(weeklyStats.panicSuccessRate * 100);
