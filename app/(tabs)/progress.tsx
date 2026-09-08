@@ -3,11 +3,9 @@
 // TypeScript strict mode.
 
 import { PersonalBestCard } from "@/src/components/PersonalBestCard";
-import { ShareStreakCard } from "@/src/components/ShareStreakCard";
 import { StreakRing } from "@/src/components/StreakRing";
 import { WeeklyInsightCard } from "@/src/components/WeeklyInsightCard";
 import { colors } from "@/src/constants/theme";
-import { useAppState } from "@/src/contexts/AppStateContext";
 import { useDatabaseContext } from "@/src/contexts/DatabaseContext";
 import {
 	getAllCheckinDates,
@@ -21,15 +19,13 @@ import {
 	calculateLongestStreak,
 	calculateStreak,
 } from "@/src/domain/progress-rules";
-import { shareStreakCard } from "@/src/services/share";
 import { getDaysBetween, getLocalDateString } from "@/src/utils/date";
 import { format } from "date-fns";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Divider, Text } from "react-native-paper";
-import ViewShot from "react-native-view-shot";
+import { Card, Divider, Text } from "react-native-paper";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -161,23 +157,7 @@ function WeekComparisonCard({
 export default function ProgressScreen(): React.ReactElement {
 	const { t } = useTranslation();
 	const { db } = useDatabaseContext();
-	const {
-		meditationRank,
-		meditationCount: totalMeditationCount,
-		streak,
-	} = useAppState();
 	const today = getLocalDateString();
-
-	// Share card ref
-	const shareCardRef = useRef<ViewShot>(null);
-	const [isSharing, setIsSharing] = useState(false);
-
-	const handleShare = useCallback(async (): Promise<void> => {
-		if (isSharing) return;
-		setIsSharing(true);
-		await shareStreakCard(shareCardRef);
-		setIsSharing(false);
-	}, [isSharing]);
 
 	const zeroWeekStats: WeeklyStats = {
 		successRate: 0,
@@ -326,31 +306,6 @@ export default function ProgressScreen(): React.ReactElement {
 
 			{/* Personal best highlight */}
 			<PersonalBestCard bestStreak={bestStreak} currentStreak={currentStreak} />
-
-			{/* Share streak button */}
-			<Button
-				mode="outlined"
-				onPress={() => void handleShare()}
-				loading={isSharing}
-				disabled={isSharing}
-				style={styles.shareButton}
-				contentStyle={styles.shareButtonContent}
-				textColor={colors.secondary}
-				accessibilityLabel={t("progress.shareYourStreak")}
-			>
-				{t("progress.shareYourStreak")}
-			</Button>
-
-			{/* Off-screen share card for capture */}
-			<View style={styles.offscreenCapture} pointerEvents="none">
-				<ViewShot ref={shareCardRef} options={{ format: "png", quality: 1 }}>
-					<ShareStreakCard
-						streak={streak}
-						meditationCount={totalMeditationCount}
-						meditationRank={meditationRank}
-					/>
-				</ViewShot>
-			</View>
 
 			{/* Week comparison */}
 			<WeekComparisonCard
@@ -502,19 +457,6 @@ const styles = StyleSheet.create({
 	},
 	bottomSpacer: {
 		height: 24,
-	},
-	shareButton: {
-		borderRadius: 12,
-		borderColor: colors.secondary,
-	},
-	shareButtonContent: {
-		paddingVertical: 6,
-	},
-	offscreenCapture: {
-		position: "absolute",
-		top: -9999,
-		left: 0,
-		opacity: 0,
 	},
 	// WeekComparisonCard styles
 	comparisonTitle: {
